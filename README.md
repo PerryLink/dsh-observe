@@ -1,0 +1,198 @@
+<div align="center">
+
+# 📊 dsh-observe
+
+**OpenTelemetry and Langfuse observability exporter for DeepSeek Harness.**
+
+*Turn session events into OTLP traces and Langfuse observations — sanitized, buffered, off by default.*
+
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![DSH plugin](https://img.shields.io/badge/dsh-plugin-✅-green)](https://github.com/topics/dsh-plugin)
+[![Node](https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-brightgreen.svg)](#)
+[![CI](https://img.shields.io/github/actions/workflow/status/PerryLink/dsh-observe/ci.yml?branch=main&label=CI)](https://github.com/PerryLink/dsh-observe/actions)
+[![Version](https://img.shields.io/github/v/tag/PerryLink/dsh-observe?label=version)](https://github.com/PerryLink/dsh-observe/releases)
+[![npm version](https://img.shields.io/npm/v/dsh-observe)](https://www.npmjs.com/package/dsh-observe)
+[![npm downloads](https://img.shields.io/npm/dm/dsh-observe)](https://www.npmjs.com/package/dsh-observe)
+
+[English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
+
+</div>
+
+---
+
+## Compatibility
+
+| Surface | Status |
+|---|---|
+| Harness | DeepSeek Harness `0.1.0-rc.6` |
+| Node | `^22.19.0 \|\| >=24.0.0` |
+| Backends | OpenTelemetry OTLP/HTTP (traces + metrics, JSON encoding) and Langfuse (LLM observability) — either or both |
+| Model | Model-agnostic: it exports the session/event stream; no model calls are made |
+
+## What you get
+
+`dsh-observe` turns the harness's `session/event` stream into standard observability protocols:
+
+- **Spans** — turn, step, tool-call (duration, status, retry derivation), and LLM generation spans, linked into per-turn traces with deterministic ids.
+- **Metrics** — per-provider/model token counters, USD cost counters (configurable pricing table), and the optional context-pressure gauge from `ctx.tokenMeter`.
+- **Sanitized capture** — prompt and completion bodies are redacted (structural key names + built-in secret patterns + your patterns) and truncated before anything is queued or sent.
+- **Reliability** — async batching (size- and timer-triggered), a bounded durable offline buffer (storage-domain) with oldest-first eviction, and deterministic exponential-backoff retries; undeliverable batches survive restarts.
+- **Runtime kill switch** — the optional Typert remote (`observe/status`, `observe/setEnabled`) lets a settings page stop and resume exporting without unmounting.
+- **Off by default** — `enabled: true` plus at least one backend is an explicit opt-in; nothing is captured or exported otherwise.
+
+```text
+session/event stream
+   │ collector (turn/step/tool/llm spans, metrics)
+   │ sanitize (keys, secrets, budgets)
+   ├──▶ pipeline "otlp"  ── queue ── flush ──▶ OTLP /v1/traces + /v1/metrics
+   │         └─ retry/backoff ─┐
+   ├──▶ pipeline "langfuse" ── queue ── flush ──▶ Langfuse ingestion
+   │         └─ retry/backoff ─┤
+   └────────── durable spool (offline buffer, bounded) ◀┘
+```
+
+## Quick start
+
+```sh
+# 1. install the bundle into your profile
+dsh plugin --profile web add "github:PerryLink/dsh-observe#main"
+
+# or from npm (published releases)
+dsh plugin --profile web add dsh-observe
+
+# 2. configure a backend in your profile patch (cordis.yml) and restart
+dsh --profile web
+```
+
+Minimal OTLP configuration (the row ships commented out in `cordis.patch.yml`):
+
+```yaml
+- insert:
+    - id: dsh-observe
+      name: dsh-observe
+      config:
+        enabled: true
+        otlp:
+          endpoint: http://localhost:4318
+```
+
+Then verify the row mounts:
+
+```sh
+dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
+```
+
+## Install & uninstall
+
+- **git channel** (latest `main`): `dsh plugin --profile web add "github:PerryLink/dsh-observe#main"` — the `prepare` script builds with production dependencies only.
+- **npm channel** (published releases): `dsh plugin --profile web add dsh-observe`.
+- **tarball channel**: `pnpm pack` in this repo, then `dsh plugin --profile web add ./dsh-observe-<version>.tgz`.
+- **uninstall**: `dsh plugin --profile web remove dsh-observe` (or remove the row from the profile patch).
+
+> If pnpm reports `ERR_PNPM_IGNORED_BUILDS` for this package (esbuild's harmless platform-binary validation), add `allowBuilds: { esbuild: true }` to your `pnpm-workspace.yaml` — the `dsh` CLI prints the exact snippet.
+
+## Configuration
+
+All tunables are Schemastery `Config` fields (changeable from cordis.yml). An id-targeted override replaces the whole row — restate every key you need. `cordis.patch.yml` documents each key inline.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `false` | Master switch; `true` plus at least one backend is the explicit opt-in |
+| `otlp` | `null` | OTLP backend config, or `null` to disable it |
+| `otlp.endpoint` | *(required)* | OTLP base URL; `/v1/traces` and `/v1/metrics` are appended |
+| `otlp.serviceName` | `deepseek-harness` | `service.name` resource attribute |
+| `otlp.serviceVersion` | *(none)* | `service.version` resource attribute |
+| `otlp.headers` | `{}` | Extra headers merged into every export request |
+| `otlp.timeoutMs` | `10000` | Per-request timeout |
+| `langfuse` | `null` | Langfuse backend config, or `null` to disable it |
+| `langfuse.baseUrl` | `https://cloud.langfuse.com` | Langfuse base URL |
+| `langfuse.publicKey` | *(required)* | Project public key |
+| `langfuse.secretKey` | *(required)* | Project secret key |
+| `langfuse.release` | *(none)* | Release tag stamped onto traces |
+| `langfuse.timeoutMs` | `10000` | Per-request timeout |
+| `capture.turns` | `true` | Turn lifecycle spans |
+| `capture.steps` | `true` | Step lifecycle spans |
+| `capture.tools` | `true` | Tool-call spans with sanitized arguments/results |
+| `capture.llm` | `true` | LLM generation spans |
+| `llm.prompt` | `true` | Capture the sanitized request prompt (`false` = sizes only) |
+| `llm.completion` | `true` | Capture the sanitized completion (`false` = sizes only) |
+| `metadata.sessionId` | `true` | Session id attribute |
+| `metadata.cwd` | `false` | Session working directory (a local path — off by default) |
+| `metadata.agentPreset` | `true` | Agent preset id attribute |
+| `metadata.model` | `true` | Provider/model attributes |
+| `metrics.tokens` | `true` | Per-provider/model token counters |
+| `metrics.cost` | `true` | USD cost counters (need `pricing` rules to match) |
+| `metrics.contextTokens` | `true` | Context-pressure gauge (needs `ctx.tokenMeter`) |
+| `pricing` | `[]` | Pricing table, first match wins: `{ provider?, model, inputPerToken, outputPerToken, cacheReadPerToken?, cacheWritePerToken? }` |
+| `sanitize.enabled` | `true` | Redaction master switch (`false` disables redaction, never truncation) |
+| `sanitize.redactKeys` | `[]` | Extra key-name substrings (key/token/secret/password/authorization/credential/apiKey are always included) |
+| `sanitize.redactPatterns` | `[]` | Extra secret regular expressions |
+| `sanitize.truncatePromptChars` | `4000` | Prompt character budget |
+| `sanitize.truncateCompletionChars` | `4000` | Completion character budget |
+| `sanitize.truncateToolInputChars` | `2000` | Tool argument character budget |
+| `sanitize.truncateToolOutputChars` | `2000` | Tool result character budget |
+| `sanitize.truncateAttributeChars` | `512` | Span attribute string budget |
+| `batch.maxRecords` | `256` | Flush once the queue holds this many records |
+| `batch.flushIntervalMs` | `5000` | Timer flush interval |
+| `batch.maxQueueRecords` | `2000` | In-memory queue bound; excess spills to the buffer |
+| `batch.maxBufferRecords` | `10000` | Durable offline buffer bound; oldest records drop first |
+| `batch.bufferRetryIntervalMs` | `30000` | Offline buffer retry interval |
+| `retry.maxAttempts` | `5` | Attempts per batch, including the first try |
+| `retry.baseDelayMs` | `1000` | First backoff delay |
+| `retry.factor` | `2` | Backoff multiplier per consecutive failure |
+| `retry.maxDelayMs` | `60000` | Backoff ceiling |
+| `remote.enabled` | `false` | Mount the `observe` Typert remote (kill switch) |
+
+## Tools & surfaces
+
+This plugin registers **no model tools** — it is a background exporter. Its surfaces:
+
+- **Consumes** `session/event` (span/metric collection), `session/flush` (best-effort export kick — the durability checkpoint never waits on a remote backend), and `session/disposed`.
+- **Optional remote service** `observe` — `observe/status` returns the kill-switch state, configured backends, queue depths, and buffer occupancy; `observe/setEnabled` stops and resumes exporting at runtime.
+
+## Permissions & data
+
+- **Permissions**: `network:outbound` to the endpoints you configure, `session:read` for the event stream, `storage:write` for the offline buffer; no native code, no filesystem access.
+- **Data**: everything sent is derived from the session log and sanitized (redaction + truncation) before it is queued, buffered, or transmitted. The offline buffer stores only sanitized records, re-validated when read back.
+- **Credentials**: Langfuse public/secret keys travel only to the configured Langfuse endpoint; OTLP headers only to the configured OTLP endpoint. The plugin stores no credentials itself — keep them in credential references or environment-injected values.
+
+## Security boundaries
+
+- **Off by default** — nothing is captured or exported unless you opt in explicitly.
+- **Sanitize before send** — structural key redaction, built-in secret patterns (API keys, GitHub tokens, AWS keys, bearer credentials, private keys), your patterns, and character budgets all apply before any record leaves memory.
+- **Durable boundary re-validation** — records read back from storage are checked again before a sink can see them.
+- **Failure loud, failure contained** — export failures warn, count, retry, and finally spool; a failing session handler is caught and logged so observability can never break the harness hot path.
+- **Model-visible ⟺ logged** — prompt/completion exports project only the logged header and the session surface; the exporter invents no content.
+
+## Known limitations
+
+- **rc.6 only** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.0-rc.6`; newer harness baselines are expected to work but are verified by the monthly compat workflow.
+- **Metrics bypass the retry/spool path** — OTLP metrics are aggregated cumulatively, so a lost flush self-heals on the next one (by design, not a bug).
+- **No sampling** — every enabled span family is exported; set `capture.*` switches and `batch.maxBufferRecords` for high-volume sessions.
+
+## Development
+
+```sh
+pnpm install        # node ^22.19 || >=24
+pnpm run typecheck  # tsc: src + tests against the local harness checkout
+pnpm run typecheck:ci  # tsc against the published 0.1.0-rc.6 types (no paths)
+pnpm test           # vitest: 95 tests, 13 suites (real Context/Session/storage seam)
+pnpm run test:coverage  # coverage gate (90/80/90/90)
+pnpm run build      # tsdown bundle + tsc declarations (lib/)
+pnpm run verify:self-contained  # dependency specs resolve from the registry
+pnpm run verify:artifacts       # built ESM face + bundle patch present
+node scripts/check-readme-sync.mjs  # five-language README sync gate
+pnpm pack           # the published tarball
+```
+
+## Topics
+
+`dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `observability`, `opentelemetry`, `otlp`, `langfuse`, `tracing`
+
+## Contributors
+
+- [@PerryLink](https://github.com/PerryLink) — creator and maintainer: collector, pipelines, spool, OTLP/Langfuse sinks, sanitization, and the five-language docs.
+
+## License
+
+[Apache License 2.0](LICENSE) © 2026 dsh-observe contributors
