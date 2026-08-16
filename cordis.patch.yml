@@ -1,0 +1,86 @@
+# dsh-observe bundle patch: mount the observability exporter.
+#
+# Every key below is a Config field (Schemastery schema); invalid values fail
+# the profile load loudly. See README.md "Configuration" for the full table.
+# Off by default: `enabled: true` PLUS at least one backend is an explicit
+# opt-in — exporting observability data never happens implicitly.
+- insert:
+    - id: dsh-observe
+      name: dsh-observe
+      config:
+        # Master switch. Off by default: nothing is captured or exported.
+        enabled: false
+        # OpenTelemetry OTLP/HTTP backend; null/omitted disables it.
+        # endpoint must be the OTLP base URL — /v1/traces and /v1/metrics
+        # are appended by the plugin.
+        otlp: null
+        # otlp:
+        #   endpoint: http://localhost:4318
+        #   serviceName: deepseek-harness
+        #   serviceVersion: ''
+        #   headers: {}
+        #   timeoutMs: 10000
+        # Langfuse backend; null/omitted disables it. publicKey/secretKey
+        # are project credentials — prefer credential references or
+        # environment-injected profile values; never commit them.
+        langfuse: null
+        # langfuse:
+        #   baseUrl: https://cloud.langfuse.com
+        #   publicKey: ''
+        #   secretKey: ''
+        #   release: ''
+        #   timeoutMs: 10000
+        # Span families to capture.
+        capture:
+          turns: true
+          steps: true
+          tools: true
+          llm: true
+        # LLM prompt/completion capture policy. `false` records only sizes
+        # and counts, never bodies.
+        llm:
+          prompt: true
+          completion: true
+        # Metadata capture switches. `cwd` is a local path — off by default.
+        metadata:
+          sessionId: true
+          cwd: false
+          agentPreset: true
+          model: true
+        # Metric families to export.
+        metrics:
+          tokens: true
+          cost: true
+          contextTokens: true
+        # Pricing table for the cost metric (USD per token, first match
+        # wins). Empty by default: no prices are hardcoded in the plugin.
+        pricing: []
+        # Pre-send sanitization policy. Key-name redaction always includes
+        # key/token/secret/password/authorization/credential/apiKey;
+        # redactPatterns are additional regular expressions.
+        sanitize:
+          enabled: true
+          redactKeys: []
+          redactPatterns: []
+          truncatePromptChars: 4000
+          truncateCompletionChars: 4000
+          truncateToolInputChars: 2000
+          truncateToolOutputChars: 2000
+          truncateAttributeChars: 512
+        # Shared batching policy (in-memory queue + durable offline buffer).
+        batch:
+          maxRecords: 256
+          flushIntervalMs: 5000
+          maxQueueRecords: 2000
+          maxBufferRecords: 10000
+          bufferRetryIntervalMs: 30000
+        # Shared retry/backoff policy for network exports.
+        retry:
+          maxAttempts: 5
+          baseDelayMs: 1000
+          factor: 2
+          maxDelayMs: 60000
+        # Optional Typert remote surface (observe/status, observe/setEnabled)
+        # for settings pages — setEnabled is the runtime kill switch.
+        remote:
+          enabled: false
