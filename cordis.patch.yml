@@ -5,6 +5,19 @@
 # Off by default: `enabled: true` PLUS at least one backend is an explicit
 # opt-in — exporting observability data never happens implicitly.
 - insert:
+    - id: storage
+      name: '@deepseek-ai/dsh-storage'
+
+    - id: storage-json
+      name: '@deepseek-ai/dsh-storage-json'
+      config:
+        root: !!js dshHomePath('storages')
+
+    - id: storage-domain
+      name: '@deepseek-ai/dsh-storage-domain'
+      config:
+        backend: json
+
     - id: dsh-observe
       name: dsh-observe
       config:
