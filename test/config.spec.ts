@@ -71,6 +71,12 @@ describe('resolveConfig', () => {
 
   it('rejects the API sub-path on the OTLP endpoint (the sink appends /v1/*)', () => {
     expect(() => resolveConfig({ otlp: { endpoint: 'http://x/v1/traces' } })).toThrow(/base URL/u)
+    expect(() => resolveConfig({ otlp: { endpoint: 'http://x/v1/metrics' } })).toThrow(/base URL/u)
+  })
+
+  it('rejects a half-configured langfuse backend (empty credentials)', () => {
+    expect(() => resolveConfig({ langfuse: { publicKey: '', secretKey: 'sk' } })).toThrow(/publicKey must be a non-empty string/u)
+    expect(() => resolveConfig({ langfuse: { publicKey: 'pk', secretKey: '  ' } })).toThrow(/secretKey must be a non-empty string/u)
   })
 
   it('rejects an empty serviceName and fills it from the default otherwise', () => {
