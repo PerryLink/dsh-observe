@@ -24,7 +24,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `0.1.0-rc.6` |
+| Harness | DeepSeek Harness `0.1.0-rc.8` |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificación JSON) y Langfuse (observabilidad de LLM) — uno o ambos |
 | Modelo | Independiente del modelo: exporta el flujo `session/event`; no realiza llamadas a modelos |
@@ -166,7 +166,7 @@ Este plugin **no registra herramientas de modelo** — es un exportador en segun
 
 ## Known limitations
 
-- **Solo rc.6** — el plugin se desarrolla y prueba contra `@deepseek-ai/dsh@0.1.0-rc.6`; se espera que baselines más nuevos funcionen y el workflow compat mensual los verifica.
+- **Solo rc.8** — el plugin se desarrolla y prueba contra `@deepseek-ai/dsh@0.1.0-rc.8`; se espera que baselines más nuevos funcionen y el workflow compat mensual los verifica.
 - **Las métricas evitan la ruta de reintento/spool** — las métricas OTLP se agregan de forma acumulativa, así que un flush perdido se autocura en el siguiente (por diseño, no es un fallo).
 - **Sin muestreo** — toda familia de spans habilitada se exporta; ajusta los interruptores `capture.*` y `batch.maxBufferRecords` para sesiones de alto volumen.
 
@@ -175,8 +175,8 @@ Este plugin **no registra herramientas de modelo** — es un exportador en segun
 ```sh
 pnpm install        # node ^22.19 || >=24
 pnpm run typecheck  # tsc: src + tests contra el checkout local del harness
-pnpm run typecheck:ci  # tsc contra los tipos publicados 0.1.0-rc.6 (sin paths)
-pnpm test           # vitest: 95 tests, 13 suites (Context/Session/storage seam reales)
+pnpm run typecheck:ci  # tsc contra los tipos publicados 0.1.0-rc.8 (sin paths)
+pnpm test           # vitest: 114 tests, 18 suites (Context/Session/storage seam reales)
 pnpm run test:coverage  # puerta de cobertura (90/80/90/90)
 pnpm run build      # bundle tsdown + declaraciones tsc (lib/)
 pnpm run verify:self-contained  # las especificaciones de dependencias resuelven desde el registry

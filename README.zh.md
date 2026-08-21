@@ -24,7 +24,7 @@
 
 | 方面 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `0.1.0-rc.6` |
+| Harness | DeepSeek Harness `0.1.0-rc.8` |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 后端 | OpenTelemetry OTLP/HTTP（traces + metrics，JSON 编码）与 Langfuse（LLM 可观测）——二选一或同时 |
 | 模型 | 与模型无关：它导出 session/event 流，自身不调用任何模型 |
@@ -166,7 +166,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ## Known limitations
 
-- **仅 rc.6** —— 插件针对 `@deepseek-ai/dsh@0.1.0-rc.6` 开发与测试；更新的 harness 基线预期可用，由月度 compat 工作流验证。
+- **仅 rc.8** —— 插件针对 `@deepseek-ai/dsh@0.1.0-rc.8` 开发与测试；更新的 harness 基线预期可用，由月度 compat 工作流验证。
 - **Metrics 不走重试/缓冲路径** —— OTLP metrics 按累计聚合，丢失一次 flush 会在下一次自愈（设计如此，非缺陷）。
 - **无采样** —— 每个启用的 span 族都会导出；大流量会话请调整 `capture.*` 开关与 `batch.maxBufferRecords`。
 
@@ -175,7 +175,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 ```sh
 pnpm install        # node ^22.19 || >=24
 pnpm run typecheck  # tsc：src + tests，对照本地 harness checkout
-pnpm run typecheck:ci  # tsc：对照已发布的 0.1.0-rc.6 类型（无 paths）
+pnpm run typecheck:ci  # tsc：对照已发布的 0.1.0-rc.8 类型（无 paths）
 pnpm test           # vitest：95 个测试、13 个套件（真实 Context/Session/storage 接缝）
 pnpm run test:coverage  # 覆盖率门禁（90/80/90/90）
 pnpm run build      # tsdown bundle + tsc 声明（lib/）

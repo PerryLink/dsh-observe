@@ -14,7 +14,7 @@ published tarball; these are install-time dependencies:
 | [zod](https://github.com/colinhacks/zod) | `^4.4.3` | MIT | Runtime value schema for the durable offline-buffer domain table |
 | [@deepseek-ai/cordis](https://www.npmjs.com/package/@deepseek-ai/cordis) | `^4.0.1` (peer) | See package | The plugin runtime |
 | [@deepseek-ai/schemastery](https://www.npmjs.com/package/@deepseek-ai/schemastery) | `^3.18.0` (peer) | See package | Configuration schema |
-| `@deepseek-ai/dsh-*` peers | `0.1.0-rc.6` (peer) | See packages | Official harness seams (`dsh-session`, `dsh-llm`, `dsh-storage-domain`, `dsh-typert-protocol`) |
+| `@deepseek-ai/dsh-*` peers | `0.1.0-rc.8` (peer) | See packages | Official harness seams (`dsh-session`, `dsh-llm`, `dsh-storage-domain`, `dsh-typert-protocol`) |
 
 At runtime the plugin only talks to the harness services listed as
 peerDependencies and to the observability endpoints **you** configure; it

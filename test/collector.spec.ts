@@ -1,5 +1,5 @@
 /**
- * The session/event collector over a REAL Session from the 0.1.0-rc.6 peers:
+ * The session/event collector over a REAL Session from the 0.1.0-rc.8 peers:
  * turn/step/tool/llm span lifecycles, retry derivation, missing-closer error
  * closure, sanitized prompt/completion capture, usage/cost metrics, and the
  * optional token-meter context gauge. No mocked harness services.
@@ -52,7 +52,7 @@ function feedSurface<T extends SessionEventType>(
   type: T,
   data: SessionEventMap[T],
 ): void {
-  // The rc.6 Session requires a SurfaceIntent on message-producing events;
+  // The rc.8 Session requires a SurfaceIntent on message-producing events;
   // the harness emits plain appends (no replacement ever happens here).
   const append = session.append as unknown as (
     eventType: string,

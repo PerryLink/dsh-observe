@@ -5,7 +5,7 @@
  * (or resumes) exporting without unmounting the plugin. Mounted only when
  * `remote.enabled: true`; the service itself never exports data.
  *
- * **No `@Remote` method decorators**: the rc.6 typert loader binds the
+ * **No `@Remote` method decorators**: the rc.8 typert loader binds the
  * `./typert` manifest invocations (src/typert.host.ts) to same-named public
  * methods, and decorator syntax breaks both the vitest transform pipeline
  * and the plain-Node build output (the dsh-mcp-panel precedent).
