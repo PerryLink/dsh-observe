@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Upgraded the `@deepseek-ai/dsh-*` dependency family from `0.1.0-rc.8` to `0.1.1-rc.2` (`dsh-llm`, `dsh-session`, `dsh-storage`, `dsh-storage-domain`, `dsh-storage-json`, `dsh-typert-protocol`); the plugin now ships against the rc.2 harness baseline.
+
 ## [0.1.3] - 2026-08-22
 
 ### Added
