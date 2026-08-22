@@ -1,6 +1,7 @@
 <div align="center">
 
 # 📊 dsh-observe
+[![Gitee](https://img.shields.io/badge/Gitee-mirror-c71d23?logo=gitee)](https://gitee.com/perrylink/dsh-observe)
 
 **OpenTelemetry and Langfuse observability exporter for DeepSeek Harness.**
 
