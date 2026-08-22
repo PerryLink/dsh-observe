@@ -14,7 +14,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-observe`). Development follo
 - `src/ids.ts` — deterministic digest ids. The digest includes each part's runtime TYPE: numeric `1` and string `'1'` must never collide into one id.
 - `src/remote.ts` — optional Typert remote service (`observe/status`, `observe/setEnabled`) — the runtime kill switch.
 - `scripts/` — `prepare.mjs` (build), `verify-self-contained.mjs`, `verify-artifacts.mjs`, `check-readme-sync.mjs` (five-language sync gate), `release.mjs` (bump + stamp + gates + commit + tag, never pushes), `changelog-section.mjs` (release-notes extraction).
-- `test/` — vitest; REAL `Context`/`SessionStore`/`Session` and the REAL storage seam (dsh-storage + dsh-storage-json backend in a per-test temp dir + dsh-storage-domain facility) from the 0.1.0-rc.8 peers. Only the network edge (global `fetch`) is scripted. Message-producing session events must carry their `surfaceOp` intent when appended (rc.8 contract).
+- `test/` — vitest; REAL `Context`/`SessionStore`/`Session` and the REAL storage seam (dsh-storage + dsh-storage-json backend in a per-test temp dir + dsh-storage-domain facility) from the 0.1.1-rc.2 peers. Only the network edge (global `fetch`) is scripted. Message-producing session events must carry their `surfaceOp` intent when appended (rc.2 contract).
 
 ## Hard rules applied here
 
@@ -30,7 +30,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-observe`). Development follo
 
 `pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run test:coverage && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && node scripts/check-readme-sync.mjs && pnpm pack`
 
-- `typecheck` resolves `@deepseek-ai/*` through tsconfig paths to the local harness checkout; `typecheck:ci` clears the paths and checks against the published `0.1.0-rc.8` types. Both must stay green — the package ships against rc.8.
+- `typecheck` resolves `@deepseek-ai/*` through tsconfig paths to the local harness checkout; `typecheck:ci` clears the paths and checks against the published `0.1.1-rc.2` types. Both must stay green — the package ships against rc.2.
 - `test:coverage` gates at 90/80/90/90 (statements/branches/functions/lines), `src/index.ts` excluded.
 
 ## Release

@@ -1,6 +1,6 @@
 /**
  * Shared test harness: REAL Cordis `Context`, REAL `SessionStore`/`Session`
- * from the 0.1.0-rc.8 peers, and the REAL storage seam
+ * from the 0.1.1-rc.2 peers, and the REAL storage seam
  * (dsh-storage + dsh-storage-json backend + dsh-storage-domain facility)
  * rooted in a per-mount temp directory. Only the network edge (global
  * `fetch`) is scripted, per test.
