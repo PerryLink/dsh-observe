@@ -109,6 +109,8 @@ Todos los ajustes son campos `Config` de Schemastery (modificables desde cordis.
 | `langfuse.publicKey` | *(obligatorio)* | Clave pública del proyecto |
 | `langfuse.secretKey` | *(obligatorio)* | Clave secreta del proyecto |
 | `langfuse.release` | *(ninguno)* | Etiqueta release estampada en las trazas |
+| `langfuse.traceName` | `session {session} turn {turn}` | Plantilla del nombre de traza; `{session}`/`{turn}` se interpolan por traza |
+| `langfuse.tags` | `[]` | Etiquetas estáticas estampadas en cada traza |
 | `langfuse.timeoutMs` | `10000` | Tiempo de espera por petición |
 | `capture.turns` | `true` | Spans de ciclo de vida del turno |
 | `capture.steps` | `true` | Spans de ciclo de vida del paso |

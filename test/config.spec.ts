@@ -38,6 +38,8 @@ describe('Config schema', () => {
     expect(resolved.langfuse).not.toBeNull()
     expect(resolved.langfuse?.baseUrl).toBe('https://cloud.langfuse.com')
     expect(resolved.langfuse?.timeoutMs).toBe(10_000)
+    expect(resolved.langfuse?.traceName).toBe('session {session} turn {turn}')
+    expect(resolved.langfuse?.tags).toEqual([])
   })
 
   it('fills otlp defaults when the backend is configured', () => {
@@ -77,6 +79,16 @@ describe('resolveConfig', () => {
   it('rejects a half-configured langfuse backend (empty credentials)', () => {
     expect(() => resolveConfig({ langfuse: { publicKey: '', secretKey: 'sk' } })).toThrow(/publicKey must be a non-empty string/u)
     expect(() => resolveConfig({ langfuse: { publicKey: 'pk', secretKey: '  ' } })).toThrow(/secretKey must be a non-empty string/u)
+  })
+
+  it('resolves the langfuse traceName template and tags with their defaults', () => {
+    const resolved = resolveConfig({ langfuse: { publicKey: 'pk', secretKey: 'sk' } })
+    expect(resolved.langfuse?.traceName).toBe('session {session} turn {turn}')
+    expect(resolved.langfuse?.tags).toEqual([])
+
+    const custom = resolveConfig({ langfuse: { publicKey: 'pk', secretKey: 'sk', traceName: 'agent {session}#{turn}', tags: ['omdsh'] } })
+    expect(custom.langfuse?.traceName).toBe('agent {session}#{turn}')
+    expect(custom.langfuse?.tags).toEqual(['omdsh'])
   })
 
   it('rejects an empty serviceName and fills it from the default otherwise', () => {

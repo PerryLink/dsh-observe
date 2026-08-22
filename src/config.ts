@@ -157,6 +157,10 @@ export interface LangfuseConfig {
   secretKey: string
   /** Release tag stamped onto traces. */
   release?: string
+  /** Trace-name template; `{session}` and `{turn}` interpolate per trace. */
+  traceName?: string
+  /** Static tags stamped onto every trace. */
+  tags?: string[]
   /** Per-request timeout in milliseconds. */
   timeoutMs?: number
 }
@@ -268,6 +272,10 @@ export interface ResolvedLangfuse {
   readonly publicKey: string
   readonly secretKey: string
   readonly release: string | undefined
+  /** Trace-name template; `{session}` and `{turn}` interpolate per trace. */
+  readonly traceName: string
+  /** Static tags stamped onto every trace-create. */
+  readonly tags: readonly string[]
   readonly timeoutMs: number
 }
 
@@ -302,6 +310,8 @@ export const Config: z<Config> = z.object({
     publicKey: z.string().required(),
     secretKey: z.string().required(),
     release: z.string(),
+    traceName: z.string().default('session {session} turn {turn}'),
+    tags: z.array(z.string()).default([]),
     timeoutMs: z.number().default(10_000),
   }), z.const(null)]).default(null),
   capture: z.object({
@@ -485,6 +495,8 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
       publicKey: langfuseRaw.publicKey.trim(),
       secretKey: langfuseRaw.secretKey.trim(),
       release: langfuseRaw.release === undefined ? undefined : langfuseRaw.release,
+      traceName: langfuseRaw.traceName ?? 'session {session} turn {turn}',
+      tags: [...(langfuseRaw.tags ?? [])],
       timeoutMs,
     }
   })()

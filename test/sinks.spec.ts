@@ -47,6 +47,8 @@ function langfuseConfig(overrides: Partial<ResolvedLangfuse> = {}): ResolvedLang
     publicKey: 'pk-test',
     secretKey: 'sk-test',
     release: undefined,
+    traceName: 'session {session} turn {turn}',
+    tags: [],
     timeoutMs: 5_000,
     ...overrides,
   }
@@ -217,5 +219,33 @@ describe('LangfuseSink', () => {
     const body = JSON.parse(String(fetchMock.calls[0]?.init.body)) as { batch: Array<{ type: string; body: Record<string, unknown> }> }
     const trace = body.batch.find(event => event.type === 'trace-create')
     expect(trace?.body.release).toBe('v0.1.0')
+  })
+
+  it('interpolates the configured traceName template per trace', async () => {
+    const fetchMock = installFetch()
+    const sink = new LangfuseSink(langfuseConfig({ traceName: 'agent {session}#{turn}' }), logger)
+    await sink.exportSpans([recordOf(span({ sessionId: 'sess-42', turn: 7 }))])
+    const body = JSON.parse(String(fetchMock.calls[0]?.init.body)) as { batch: Array<{ type: string; body: Record<string, unknown> }> }
+    const trace = body.batch.find(event => event.type === 'trace-create')
+    expect(trace?.body.name).toBe('agent sess-42#7')
+  })
+
+  it('keeps the default trace name and omits tags when unconfigured', async () => {
+    const fetchMock = installFetch()
+    const sink = new LangfuseSink(langfuseConfig(), logger)
+    await sink.exportSpans([recordOf(span())])
+    const body = JSON.parse(String(fetchMock.calls[0]?.init.body)) as { batch: Array<{ type: string; body: Record<string, unknown> }> }
+    const trace = body.batch.find(event => event.type === 'trace-create')
+    expect(trace?.body.name).toBe('session s1 turn 1')
+    expect(trace?.body.tags).toBeUndefined()
+  })
+
+  it('stamps the configured tags onto trace-create', async () => {
+    const fetchMock = installFetch()
+    const sink = new LangfuseSink(langfuseConfig({ tags: ['omdsh', 'coding-agent'] }), logger)
+    await sink.exportSpans([recordOf(span())])
+    const body = JSON.parse(String(fetchMock.calls[0]?.init.body)) as { batch: Array<{ type: string; body: Record<string, unknown> }> }
+    const trace = body.batch.find(event => event.type === 'trace-create')
+    expect(trace?.body.tags).toEqual(['omdsh', 'coding-agent'])
   })
 })

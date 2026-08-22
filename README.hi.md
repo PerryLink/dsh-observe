@@ -109,6 +109,8 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 | `langfuse.publicKey` | *(आवश्यक)* | प्रोजेक्ट सार्वजनिक कुंजी |
 | `langfuse.secretKey` | *(आवश्यक)* | प्रोजेक्ट गुप्त कुंजी |
 | `langfuse.release` | *(कोई नहीं)* | traces पर मुहर लगा release टैग |
+| `langfuse.traceName` | `session {session} turn {turn}` | trace नाम टेम्पलेट; `{session}`/`{turn}` हर trace पर इंटरपोलेट होते हैं |
+| `langfuse.tags` | `[]` | हर trace पर मुहर लगे स्थिर टैग |
 | `langfuse.timeoutMs` | `10000` | प्रति-अनुरोध टाइमआउट |
 | `capture.turns` | `true` | turn जीवनचक्र spans |
 | `capture.steps` | `true` | step जीवनचक्र spans |

@@ -42,6 +42,8 @@
         #   publicKey: ''
         #   secretKey: ''
         #   release: ''
+        #   traceName: 'session {session} turn {turn}'
+        #   tags: [omdsh, coding-agent]
         #   timeoutMs: 10000
         # Span families to capture.
         capture:

@@ -110,6 +110,8 @@ All tunables are Schemastery `Config` fields (changeable from cordis.yml). An id
 | `langfuse.publicKey` | *(required)* | Project public key |
 | `langfuse.secretKey` | *(required)* | Project secret key |
 | `langfuse.release` | *(none)* | Release tag stamped onto traces |
+| `langfuse.traceName` | `session {session} turn {turn}` | Trace-name template; `{session}`/`{turn}` interpolate per trace |
+| `langfuse.tags` | `[]` | Static tags stamped onto every trace |
 | `langfuse.timeoutMs` | `10000` | Per-request timeout |
 | `capture.turns` | `true` | Turn lifecycle spans |
 | `capture.steps` | `true` | Step lifecycle spans |

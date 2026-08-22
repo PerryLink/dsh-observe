@@ -36,7 +36,15 @@ function otlpConfig(endpoint: string, timeoutMs: number): ResolvedOtlp {
 }
 
 function langfuseConfig(baseUrl: string): ResolvedLangfuse {
-  return { baseUrl, publicKey: 'pk-test', secretKey: 'sk-test', release: undefined, timeoutMs: 5_000 }
+  return {
+    baseUrl,
+    publicKey: 'pk-test',
+    secretKey: 'sk-test',
+    release: undefined,
+    traceName: 'session {session} turn {turn}',
+    tags: [],
+    timeoutMs: 5_000,
+  }
 }
 
 /** Bind one server to an ephemeral loopback port and return its base URL. */

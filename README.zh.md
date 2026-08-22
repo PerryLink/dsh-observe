@@ -109,6 +109,8 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 | `langfuse.publicKey` | *(必填)* | 项目公钥 |
 | `langfuse.secretKey` | *(必填)* | 项目密钥 |
 | `langfuse.release` | *(无)* | 打在各 trace 上的 release 标签 |
+| `langfuse.traceName` | `session {session} turn {turn}` | trace 名称模板；`{session}`/`{turn}` 按 trace 插值 |
+| `langfuse.tags` | `[]` | 打在每个 trace 上的静态标签 |
 | `langfuse.timeoutMs` | `10000` | 单请求超时 |
 | `capture.turns` | `true` | turn 生命周期 span |
 | `capture.steps` | `true` | step 生命周期 span |

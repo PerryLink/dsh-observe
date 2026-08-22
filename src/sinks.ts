@@ -387,11 +387,14 @@ export class LangfuseSink implements SpanSink {
       type: 'trace-create',
       body: {
         id: traceId,
-        name: `session ${span.sessionId} turn ${span.turn}`,
+        name: this.config.traceName
+          .replaceAll('{session}', span.sessionId)
+          .replaceAll('{turn}', String(span.turn)),
         sessionId: span.sessionId,
         timestamp: isoTimestamp(span.startUnixNano),
         metadata,
         ...(this.config.release === undefined ? {} : { release: this.config.release }),
+        ...(this.config.tags.length === 0 ? {} : { tags: [...this.config.tags] }),
       },
     }
   }
