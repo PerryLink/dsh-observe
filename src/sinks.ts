@@ -313,8 +313,6 @@ export class OtlpSink implements SpanSink {
   }
 }
 
-/** Parse a metric aggregation key back into name + attributes. */
-
 /** Metric units. */
 function unitOf(name: string): string {
   if (name === 'observe.cost') return 'USD'
