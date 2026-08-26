@@ -124,6 +124,41 @@ describe('OtlpSink exportSpans', () => {
     const sink = new OtlpSink(otlpConfig(), logger)
     await expect(sink.exportSpans([recordOf(span())])).rejects.toThrow(/responded 500/u)
   })
+
+  it('maps llm spans to gen_ai.* semantic-convention attributes with a CLIENT kind', async () => {
+    const fetchMock = installFetch()
+    const sink = new OtlpSink(otlpConfig(), logger)
+    await sink.exportSpans([recordOf(span({
+      kind: 'llm',
+      step: 1,
+      llm: {
+        model: 'deepseek-chat',
+        provider: 'deepseek',
+        usage: { input: 10, output: 5, cacheRead: 2, cacheWrite: 1, reasoning: 3 },
+        finishReason: 'stop',
+        ttftMs: 42,
+        costUsd: 0.001,
+      },
+    }))])
+    const body = JSON.parse(String(fetchMock.calls[0]?.init.body)) as {
+      resourceSpans: Array<{ scopeSpans: Array<{ spans: Array<{ name: string; kind: number; attributes: Array<{ key: string; value: Record<string, unknown> }> }> }> }>
+    }
+    const llmSpan = body.resourceSpans[0]?.scopeSpans[0]?.spans[0]
+    expect(llmSpan?.name).toBe('gen_ai.client.request')
+    expect(llmSpan?.kind).toBe(3)
+    const attrs = new Map((llmSpan?.attributes ?? []).map(item => [item.key, item.value]))
+    expect(attrs.get('gen_ai.operation.name')).toEqual({ stringValue: 'chat' })
+    expect(attrs.get('gen_ai.system')).toEqual({ stringValue: 'deepseek' })
+    expect(attrs.get('gen_ai.request.model')).toEqual({ stringValue: 'deepseek-chat' })
+    expect(attrs.get('gen_ai.response.model')).toEqual({ stringValue: 'deepseek-chat' })
+    expect(attrs.get('gen_ai.response.finish_reason')).toEqual({ stringValue: 'stop' })
+    expect(attrs.get('gen_ai.client.time_to_first_token')).toEqual({ intValue: '42' })
+    expect(attrs.get('gen_ai.usage.input_tokens')).toEqual({ intValue: '10' })
+    expect(attrs.get('gen_ai.usage.output_tokens')).toEqual({ intValue: '5' })
+    expect(attrs.get('gen_ai.usage.cache_read_tokens')).toEqual({ intValue: '2' })
+    expect(attrs.get('gen_ai.usage.cache_write_tokens')).toEqual({ intValue: '1' })
+    expect(attrs.get('gen_ai.usage.reasoning_tokens')).toEqual({ intValue: '3' })
+  })
 })
 
 describe('OtlpSink metrics', () => {

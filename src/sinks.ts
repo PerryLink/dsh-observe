@@ -59,13 +59,16 @@ const STATUS_CODE_ERROR = 2
 /** OTel span kind: INTERNAL. */
 const SPAN_KIND_INTERNAL = 1
 
+/** OTel span kind: CLIENT (the GenAI semantic convention kind for LLM requests). */
+const SPAN_KIND_CLIENT = 3
+
 /** Name of one span record, shared by both backends. */
 function spanName(span: SpanRecord): string {
   switch (span.kind) {
     case 'turn': return `turn ${span.turn}`
     case 'step': return `step ${span.turn}.${String(span.step)}`
     case 'tool': return `tool ${span.tool?.name ?? 'unknown'}`
-    case 'llm': return 'llm.request'
+    case 'llm': return 'gen_ai.client.request'
   }
 }
 
@@ -104,11 +107,17 @@ function otlpSpan(span: SpanRecord): Record<string, unknown> {
     if (span.tool.errorCode !== undefined) attributes.push(otlpAttribute('tool.error.code', span.tool.errorCode))
   }
   if (span.llm !== undefined) {
-    if (span.llm.model !== undefined) attributes.push(otlpAttribute('llm.model', span.llm.model))
-    if (span.llm.provider !== undefined) attributes.push(otlpAttribute('llm.provider', span.llm.provider))
-    if (span.llm.finishReason !== undefined) attributes.push(otlpAttribute('llm.finish_reason', span.llm.finishReason))
-    if (span.llm.ttftMs !== undefined) attributes.push(otlpAttribute('llm.ttft_ms', span.llm.ttftMs))
-    if (span.llm.costUsd !== undefined) attributes.push(otlpAttribute('llm.cost_usd', span.llm.costUsd))
+    // GenAI semantic-convention attributes (OpenTelemetry gen_ai.* namespace):
+    // these are what OpenLLMetry / CC-native OTLP collectors consume.
+    attributes.push(otlpAttribute('gen_ai.operation.name', 'chat'))
+    if (span.llm.provider !== undefined) attributes.push(otlpAttribute('gen_ai.system', span.llm.provider))
+    if (span.llm.model !== undefined) {
+      attributes.push(otlpAttribute('gen_ai.request.model', span.llm.model))
+      attributes.push(otlpAttribute('gen_ai.response.model', span.llm.model))
+    }
+    if (span.llm.finishReason !== undefined) attributes.push(otlpAttribute('gen_ai.response.finish_reason', span.llm.finishReason))
+    if (span.llm.ttftMs !== undefined) attributes.push(otlpAttribute('gen_ai.client.time_to_first_token', span.llm.ttftMs))
+    if (span.llm.costUsd !== undefined) attributes.push(otlpAttribute('gen_ai.usage.cost', span.llm.costUsd))
     for (const [key, value] of usageAttributes(span.llm.usage)) {
       attributes.push(otlpAttribute(key, value))
     }
@@ -126,7 +135,7 @@ function otlpSpan(span: SpanRecord): Record<string, unknown> {
     spanId: spanIdOf(span),
     ...(parentSpanIdOf(span) === undefined ? {} : { parentSpanId: parentSpanIdOf(span) }),
     name: spanName(span),
-    kind: SPAN_KIND_INTERNAL,
+    kind: span.llm === undefined ? SPAN_KIND_INTERNAL : SPAN_KIND_CLIENT,
     startTimeUnixNano: String(span.startUnixNano),
     endTimeUnixNano: String(span.endUnixNano),
     attributes,
@@ -135,15 +144,15 @@ function otlpSpan(span: SpanRecord): Record<string, unknown> {
   }
 }
 
-/** Flatten usage counts to `usage.*` attributes. */
+/** Flatten usage counts to `gen_ai.usage.*` attributes (the GenAI semantic convention). */
 function usageAttributes(usage: TokenCounts | undefined): [string, number][] {
   if (usage === undefined) return []
   return [
-    ['usage.input_tokens', usage.input],
-    ['usage.output_tokens', usage.output],
-    ['usage.cache_read_tokens', usage.cacheRead],
-    ['usage.cache_write_tokens', usage.cacheWrite],
-    ['usage.reasoning_tokens', usage.reasoning],
+    ['gen_ai.usage.input_tokens', usage.input],
+    ['gen_ai.usage.output_tokens', usage.output],
+    ['gen_ai.usage.cache_read_tokens', usage.cacheRead],
+    ['gen_ai.usage.cache_write_tokens', usage.cacheWrite],
+    ['gen_ai.usage.reasoning_tokens', usage.reasoning],
   ]
 }
 
