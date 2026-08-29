@@ -1,6 +1,7 @@
 <div align="center">
 
 # 📊 dsh-observe
+- **Canal 1024 store**: `npm i -g dsh1024` uma vez, depois `dsh1024 plugin --profile web add dsh-observe` (conta para o ranking de instalações do [deepseek1024.com](https://deepseek1024.com)).
 
 **Exportador de observabilidade OpenTelemetry e Langfuse para o DeepSeek Harness.**
 
