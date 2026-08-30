@@ -12,7 +12,7 @@
  */
 
 import type { TokenUsage } from '@deepseek-ai/dsh-llm'
-import { isTokenDelta } from '@deepseek-ai/dsh-llm/message'
+import type { StreamChunk } from '@deepseek-ai/dsh-llm/types'
 import type { EpochHeader, RequestContext, Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import { deriveEventMessage } from '@deepseek-ai/dsh-session'
 import type { ResolvedConfig } from './config.ts'
@@ -83,6 +83,30 @@ function normalizeUsage(usage: TokenUsage | undefined): TokenCounts | undefined 
     cacheRead: usage.cacheReadTokens ?? 0,
     cacheWrite: usage.cacheWriteTokens ?? 0,
     reasoning: usage.reasoningTokens ?? 0,
+  }
+}
+
+/**
+ * Whether a stream chunk carries visible model output (the first-token
+ * boundary). Local replication of the rc.2 `@deepseek-ai/dsh-llm/message`
+ * `isTokenDelta` helper, which host 0.1.2-alpha.1 removed from that module:
+ * the host's whole-log sessionStats projection now inlines the same switch
+ * (`packages/session/session-stats/src/projection.ts`), and the chunk
+ * grammar itself is unchanged, so this predicate stays identical on both
+ * rulers. Empty deltas (heartbeats, empty tool-call frames) do not count as
+ * a first token.
+ * @param chunk - the stream chunk to test.
+ * @returns true when the chunk contains a non-empty text/reasoning/tool delta.
+ */
+function isTokenDelta(chunk: StreamChunk): boolean {
+  switch (chunk.type) {
+    case 'text-delta':
+    case 'reasoning-delta':
+      return chunk.text !== ''
+    case 'tool-call-delta':
+      return chunk.argumentsDelta !== '' || chunk.name !== undefined
+    default:
+      return false
   }
 }
 
