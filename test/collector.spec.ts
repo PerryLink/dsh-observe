@@ -6,7 +6,6 @@
  * @module dsh-observe/test/collector.spec
  */
 
-import { CallId } from '@deepseek-ai/dsh-llm'
 import { createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm/message'
 import type { Session, SessionEvent, SessionEventMap, SessionEventType } from '@deepseek-ai/dsh-session'
 import { describe, expect, it } from 'vitest'
@@ -14,6 +13,7 @@ import { resolveConfig, type Config } from '../src/config.ts'
 import { Collector, type TokenMeterService } from '../src/collector.ts'
 import type { MetricRecord, SpanRecord } from '../src/model.ts'
 import { REDACTED } from '../src/sanitize.ts'
+import { CallId } from './call-id.ts'
 import { mountBase, unmountBase } from './harness.ts'
 
 /** Drive one collector over a real session; events append for real. */
@@ -163,6 +163,70 @@ describe('collector happy path', () => {
       expect(c1?.tool?.retries).toBe(0)
       expect(c2?.tool?.attempt).toBe(2)
       expect(c2?.tool?.retries).toBe(1)
+    } finally {
+      await unmountBase(base)
+    }
+  })
+})
+
+describe('collector first-token detection', () => {
+  it('marks the first non-empty delta of each kind as the first token', async () => {
+    const base = await mountBase('collector-first-token')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      feed(base.session, handle, 'turn/start', { turn: 1 })
+      const steps: [number, SessionEventMap['assistant/chunk']['chunk']][] = [
+        [1, { type: 'reasoning-delta', index: 0, text: 'thinking' }],
+        [2, { type: 'tool-call-delta', index: 0, id: CallId('t1'), name: 'bash', argumentsDelta: '' }],
+        [3, { type: 'tool-call-delta', index: 0, id: CallId('t2'), argumentsDelta: '{"a":1}' }],
+      ]
+      for (const [step, chunk] of steps) {
+        feed(base.session, handle, 'step/start', { turn: 1, step })
+        feed(base.session, handle, 'request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' })
+        feed(base.session, handle, 'assistant/chunk', { turn: 1, step, chunk })
+        feedSurface(base.session, handle, 'assistant/message', {
+          turn: 1,
+          step,
+          message: createAssistantMessage({ content: [{ type: 'text', text: 'ok' }], source: { provider: 'p', model: 'm' } }),
+        })
+        feed(base.session, handle, 'step/end', { turn: 1, step })
+      }
+      feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
+
+      const llms = spans.filter(span => span.kind === 'llm')
+      expect(llms).toHaveLength(3)
+      for (const llm of llms) expect(typeof llm.llm?.ttftMs).toBe('number')
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  it('ignores empty deltas and non-delta chunks as the first token', async () => {
+    const base = await mountBase('collector-first-token-empty')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      feed(base.session, handle, 'turn/start', { turn: 1 })
+      feed(base.session, handle, 'step/start', { turn: 1, step: 1 })
+      feed(base.session, handle, 'request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' })
+      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: '' } })
+      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'block-start', index: 0, blockType: 'text' } })
+      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'reasoning-delta', index: 0, text: '' } })
+      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 0, outputTokens: 0 } } })
+      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'tool-call-delta', index: 0, id: CallId('t1'), argumentsDelta: '' } })
+      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'block-end', index: 0, block: { type: 'text', text: '' } } })
+      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'finish', reason: { kind: 'stop' } } })
+      feedSurface(base.session, handle, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        message: createAssistantMessage({ content: [{ type: 'text', text: 'ok' }], source: { provider: 'p', model: 'm' } }),
+      })
+      feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
+      feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.status).toBe('ok')
+      expect(llm?.llm?.finishReason).toBe('stop')
+      expect(llm?.llm?.ttftMs).toBeUndefined()
     } finally {
       await unmountBase(base)
     }
