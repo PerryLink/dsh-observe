@@ -1,6 +1,6 @@
 {
   "name": "dsh-observe",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "OpenTelemetry and Langfuse observability exporter for DeepSeek Harness: turn/step/tool/LLM spans, token and cost metrics, and sanitized LLM prompt/completion capture from the session/event stream, with async batching, bounded offline buffering, and retry with backoff.",
   "repository": {
     "type": "git",
