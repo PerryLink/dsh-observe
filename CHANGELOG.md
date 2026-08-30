@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- First-token detection on `assistant/chunk` no longer imports the removed `isTokenDelta` from `@deepseek-ai/dsh-llm/message`: host 0.1.2-alpha.1 deleted that export, so the plugin now carries a local replication of the rc.2 semantics (non-empty text/reasoning/tool deltas count; empty deltas and non-delta chunks do not). The host chunk grammar is unchanged, so both rulers behave identically.
+
+### Changed
+
+- Test call-id fixtures derive the brand from the `dsh-session` `tool/call` event payload instead of importing the dsh-llm `CallId` brand (renamed `ToolCallId` on the host checkout).
+- `AGENTS.md` records the measured tsconfig setup: no checkout `paths`; `typecheck` and `typecheck:ci` both resolve the published 0.1.1-rc.2 peers.
+
 ## [0.2.0] - 2026-08-26
 
 ### Changed

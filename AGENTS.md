@@ -30,7 +30,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-observe`). Development follo
 
 `pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run test:coverage && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && node scripts/check-readme-sync.mjs && pnpm pack`
 
-- `typecheck` resolves `@deepseek-ai/*` through tsconfig paths to the local harness checkout; `typecheck:ci` clears the paths and checks against the published `0.1.1-rc.2` types. Both must stay green — the package ships against rc.2.
+- `typecheck` (`tsconfig.json` + `tsconfig.test.json`) and `typecheck:ci` (`tsconfig.ci.json`, `skipLibCheck: false` + `verbatimModuleSyntax`) both resolve `@deepseek-ai/*` through `node_modules` to the pinned `0.1.1-rc.2` devDeps — no tsconfig `paths` to a harness checkout is configured, so the two rulers check the same published types. The package ships against rc.2.
 - `test:coverage` gates at 90/80/90/90 (statements/branches/functions/lines), `src/index.ts` excluded.
 
 ## Release
