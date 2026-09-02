@@ -547,8 +547,13 @@ export class Collector {
   private capturePrompt(session: Session, header: EpochHeader | undefined): string {
     const parts: string[] = []
     if (header?.system !== undefined) parts.push(header.system)
+    // alpha.5 renamed the Session.events getter to snapshotEvents(); older hosts
+    // (the >=0.1.0-rc.8 peer floor) still expose .events, so detect at runtime.
+    const events = typeof session.snapshotEvents === 'function'
+      ? session.snapshotEvents()
+      : (session as unknown as { events: readonly SessionEvent[] }).events
     for (const seq of session.surface.nodes) {
-      const event = session.events[seq]
+      const event = events[seq]
       if (event === undefined) continue
       const message = deriveEventMessage(event)
       if (message !== null) parts.push(projectMessage(message))
