@@ -26,7 +26,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.5 (adapted 2026-09-02): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
+| Harness | DeepSeek Harness `0.1.2-alpha.5` (adapted 2026-09-02): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, JSON encoding) and Langfuse (LLM observability) — either or both |
 | Model | Model-agnostic: it exports the session/event stream; no model calls are made |
@@ -170,7 +170,7 @@ This plugin registers **no model tools** — it is a background exporter. Its su
 
 ## Known limitations
 
-- **alpha.3 line** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.2-alpha.5`; the rc.2 line stays covered by the monthly compat workflow.
+- **alpha.5 line** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.2-alpha.5`; the rc.2 line stays covered by the monthly compat workflow.
 - **Metrics bypass the retry/spool path** — OTLP metrics are aggregated cumulatively, so a lost flush self-heals on the next one (by design, not a bug).
 - **No sampling** — every enabled span family is exported; set `capture.*` switches and `batch.maxBufferRecords` for high-volume sessions.
 

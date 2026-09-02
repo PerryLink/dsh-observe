@@ -25,7 +25,7 @@
 
 | सतह | स्थिति |
 |---|---|
-| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.5 (2026-09-02 को अनुकूलित): सत्र लिफ़ाफ़ा अपना ignorable फ़ील्ड केवल संग्रहीत-लॉग पठन संगतता के लिए रखता है - Session.append अभी भी इसे स्टैम्प नहीं कर सकता, इसलिए गेट व्यवहार अपरिवर्तित है। |
+| Harness | DeepSeek Harness `0.1.2-alpha.5` (2026-09-02 को अनुकूलित): सत्र लिफ़ाफ़ा अपना ignorable फ़ील्ड केवल संग्रहीत-लॉग पठन संगतता के लिए रखता है - Session.append अभी भी इसे स्टैम्प नहीं कर सकता, इसलिए गेट व्यवहार अपरिवर्तित है। |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | बैकएंड | OpenTelemetry OTLP/HTTP (traces + metrics, JSON एन्कोडिंग) और Langfuse (LLM ऑब्ज़र्वेबिलिटी) — एक या दोनों |
 | मॉडल | मॉडल-स्वतंत्र: यह `session/event` स्ट्रीम निर्यात करता है; कोई मॉडल कॉल नहीं करता |
@@ -169,7 +169,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ## Known limitations
 
-- **केवल rc.2** — प्लगइन `@deepseek-ai/dsh@0.1.1-rc.2` के विरुद्ध विकसित और परीक्षित है; नए हार्नेस बेसलाइन काम करने चाहिए और मासिक compat वर्कफ़्लो उन्हें सत्यापित करता है।
+- **केवल alpha.5** — प्लगइन `@deepseek-ai/dsh@0.1.2-alpha.5` के विरुद्ध विकसित और परीक्षित है; नए हार्नेस बेसलाइन काम करने चाहिए और मासिक compat वर्कफ़्लो उन्हें सत्यापित करता है।
 - **मेट्रिक्स पुनर्प्रयास/spool पथ से बचती हैं** — OTLP मेट्रिक्स संचयी रूप से एकत्र होती हैं, इसलिए खोया flush अगले में स्वयं-सुधर जाता है (डिज़ाइन से, बग नहीं)।
 - **कोई सैंपलिंग नहीं** — हर सक्षम span परिवार निर्यात होता है; उच्च-मात्रा सत्रों के लिए `capture.*` स्विच और `batch.maxBufferRecords` समायोजित करें।
 
@@ -178,7 +178,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 ```sh
 pnpm install        # node ^22.19 || >=24
 pnpm run typecheck  # tsc: src + tests स्थानीय हार्नेस चेकआउट के विरुद्ध
-pnpm run typecheck:ci  # tsc प्रकाशित 0.1.1-rc.2 प्रकारों के विरुद्ध (बिना paths)
+pnpm run typecheck:ci  # tsc प्रकाशित 0.1.2-alpha.5 प्रकारों के विरुद्ध (बिना paths)
 pnpm test           # vitest: 95 टेस्ट, 13 सुइट (वास्तविक Context/Session/storage seam)
 pnpm run test:coverage  # कवरेज द्वार (90/80/90/90)
 pnpm run build      # tsdown बंडल + tsc घोषणाएँ (lib/)
