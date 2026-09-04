@@ -111,6 +111,62 @@ function isTokenDelta(chunk: StreamChunk): boolean {
 }
 
 /**
+ * Local minimal structural type for one record of the v2
+ * `assistant/message` embedded stream (`AssistantStreamRecord` on host
+ * 0.1.3-alpha.1, which is not published to npm). The pinned 0.1.2-rc.1
+ * types have no `stream` field, so the read is structural only.
+ */
+interface EmbeddedStreamRecord {
+  readonly type: 'text-chunks' | 'reasoning-chunks' | 'tool-call-chunks' | 'chunk'
+  readonly time0?: number
+  readonly dt?: readonly number[]
+  readonly texts?: readonly string[]
+  readonly args?: readonly string[]
+  readonly time?: number
+  readonly chunk?: StreamChunk
+}
+
+/**
+ * Recover finish reason and first-token timing from the v2 embedded stream
+ * when an `assistant/message` event carries one. On the pinned rc.1 line the
+ * field is absent and the legacy `assistant/chunk` branch keeps doing the
+ * work; on 0.1.3-alpha.1 `assistant/chunk` no longer exists, so this path is
+ * the only source for those two span fields. Compact runs carry member i at
+ * `time0 + sum(dt[0..i-1])`; every member is a token-delta boundary, so the
+ * run's first non-empty member is the first token.
+ * @param state - the open step state to fill.
+ * @param data - the `assistant/message` event data.
+ */
+function consumeEmbeddedStream(state: SessionState, data: unknown): void {
+  const stream = (data as { stream?: unknown } | undefined)?.stream
+  if (!Array.isArray(stream)) return
+  const step = state.step
+  if (step === undefined) return
+  const records = stream as unknown as EmbeddedStreamRecord[]
+  for (const record of records) {
+    if (record === null || typeof record !== 'object') continue
+    if (record.type === 'chunk') {
+      if (record.time === undefined || record.chunk === undefined) continue
+      if (record.chunk.type === 'finish') {
+        step.finishReason = record.chunk.reason.kind
+      } else if (step.firstChunkUnixNano === undefined && isTokenDelta(record.chunk)) {
+        step.firstChunkUnixNano = record.time * NANO
+      }
+      continue
+    }
+    const members = record.type === 'tool-call-chunks' ? record.args : record.texts
+    if (members === undefined || members.length === 0 || record.time0 === undefined) continue
+    let time = record.time0
+    for (let index = 0; index < members.length; index += 1) {
+      if (index > 0) time += record.dt?.[index - 1] ?? 0
+      if (members[index] === '') continue
+      if (step.firstChunkUnixNano === undefined) step.firstChunkUnixNano = time * NANO
+      break
+    }
+  }
+}
+
+/**
  * The event → span/metric collector. State lives in a WeakMap keyed by the
  * live Session, so sessions the plugin stops seeing are garbage-collected.
  */
@@ -170,6 +226,7 @@ export class Collector {
         }
         break
       case 'assistant/message':
+        consumeEmbeddedStream(state, event.data)
         this.assistantMessage(session, state, event)
         break
       case 'tool/call':

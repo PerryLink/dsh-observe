@@ -141,6 +141,45 @@ describe('collector happy path', () => {
     }
   })
 
+  it('recovers finish reason and first-token timing from the v2 embedded stream', async () => {
+    const base = await mountBase('collector-v2-stream')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      feed(base.session, handle, 'turn/start', { turn: 1 })
+      feed(base.session, handle, 'step/start', { turn: 1, step: 1 })
+      feed(base.session, handle, 'request/header', {
+        header: { config: { provider: 'deepseek', model: 'deepseek-chat' }, system: 'sys' },
+        reason: 'initial',
+      })
+      // 0.1.3-alpha.1 carries the whole stream inside assistant/message and
+      // never emits assistant/chunk; the pinned rc.1 runtime accepts the
+      // extra JSON key, so the fixture rides a real append roundtrip.
+      const v2Data = {
+        turn: 1,
+        step: 1,
+        message: createAssistantMessage({
+          content: [{ type: 'text', text: 'Hi!' }],
+          source: { provider: 'deepseek', model: 'deepseek-chat' },
+        }),
+        usage: { inputTokens: 10, outputTokens: 5 },
+        stream: [
+          { type: 'text-chunks', time0: Date.now() + 500, index: 0, dt: [1], texts: ['Hi', '!'] },
+          { type: 'chunk', time: Date.now() + 510, chunk: { type: 'finish', reason: { kind: 'stop' } } },
+        ],
+      }
+      feedSurface(base.session, handle, 'assistant/message', v2Data as unknown as SessionEventMap['assistant/message'])
+      feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
+      feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.llm?.finishReason).toBe('stop')
+      expect(typeof llm?.llm?.ttftMs).toBe('number')
+      expect(llm?.llm?.ttftMs).toBeGreaterThanOrEqual(0)
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
   it('derives retries from repeated identical tool calls in one step', async () => {
     const base = await mountBase('collector-retry')
     try {
