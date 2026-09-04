@@ -25,7 +25,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `0.1.2-alpha.5` (adaptado em 2026-09-02): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. |
+| Harness | DeepSeek Harness `0.1.2-rc.1` (adaptado em 2026-09-02): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificação JSON) e Langfuse (observabilidade de LLM) — um ou ambos |
 | Modelo | Independente de modelo: exporta o fluxo `session/event`; não faz chamadas a modelos |
@@ -169,7 +169,7 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 
 ## Known limitations
 
-- **Somente alpha.5** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.2-alpha.5`; baselines mais novos devem funcionar e são verificados pelo workflow compat mensal.
+- **Somente alpha.5** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.2-rc.1`; baselines mais novos devem funcionar e são verificados pelo workflow compat mensal.
 - **Métricas evitam o caminho de tentativa/spool** — as métricas OTLP são agregadas cumulativamente, então um flush perdido se autocura no seguinte (por design, não é um bug).
 - **Sem amostragem** — toda família de spans habilitada é exportada; ajuste os interruptores `capture.*` e `batch.maxBufferRecords` para sessões de alto volume.
 
@@ -178,7 +178,7 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 ```sh
 pnpm install        # node ^22.19 || >=24
 pnpm run typecheck  # tsc: src + tests contra o checkout local do harness
-pnpm run typecheck:ci  # tsc contra os tipos publicados 0.1.2-alpha.5 (sem paths)
+pnpm run typecheck:ci  # tsc contra os tipos publicados 0.1.2-rc.1 (sem paths)
 pnpm test           # vitest: 95 testes, 13 suítes (Context/Session/storage seam reais)
 pnpm run test:coverage  # porta de cobertura (90/80/90/90)
 pnpm run build      # bundle tsdown + declarações tsc (lib/)
