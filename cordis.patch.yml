@@ -4,20 +4,13 @@
 # the profile load loudly. See README.md "Configuration" for the full table.
 # Off by default: `enabled: true` PLUS at least one backend is an explicit
 # opt-in — exporting observability data never happens implicitly.
+#
+# The storage seam (storage / storage-json / storage-domain) is NOT inserted
+# here: every shipped dsh profile composes it through dsh-base, and inserting
+# the same ids again makes the profile refuse to boot with
+# `duplicate loader entry id: storage`. Bare profiles must compose the
+# storage stack themselves.
 - insert:
-    - id: storage
-      name: '@deepseek-ai/dsh-storage'
-
-    - id: storage-json
-      name: '@deepseek-ai/dsh-storage-json'
-      config:
-        root: !!js dshHomePath('storages')
-
-    - id: storage-domain
-      name: '@deepseek-ai/dsh-storage-domain'
-      config:
-        backend: json
-
     - id: dsh-observe
       name: dsh-observe
       config:
