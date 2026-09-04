@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Recover the LLM span finish reason and first-token timing from the v2 embedded `assistant/message` stream that the 0.1.3-alpha.1 host ships instead of `assistant/chunk` events; the legacy chunk path stays as the published-line fallback. No behavior change on the published 0.1.2-rc.1 line.
+
 ## [0.2.5] - 2026-09-04
 
 ### Changed
