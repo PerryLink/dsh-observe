@@ -25,7 +25,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `0.1.2-rc.1` (adaptado el 2026-09-02): el sobre de sesión conserva su campo ignorable solo para compatibilidad de lectura de logs almacenados - Session.append aún no puede estamparlo, por lo que el comportamiento de la puerta no cambia. Verificado el 2026-09-06 contra el master checkout dsh-v0.1.3-alpha.1 (cadena completa de puertas + smoke de instalación de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.3-alpha.1` (adaptado el 2026-09-02): el sobre de sesión conserva su campo ignorable solo para compatibilidad de lectura de logs almacenados - Session.append aún no puede estamparlo, por lo que el comportamiento de la puerta no cambia. Verificado el 2026-09-06 contra el master checkout dsh-v0.1.3-alpha.1 (cadena completa de puertas + smoke de instalación de perfil). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificación JSON) y Langfuse (observabilidad de LLM) — uno o ambos |
 | Modelo | Independiente del modelo: exporta el flujo `session/event`; no realiza llamadas a modelos |

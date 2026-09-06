@@ -25,7 +25,7 @@
 
 | 方面 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `0.1.2-rc.1`（2026-09-02 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。已于 2026-09-06 对照 dsh-v0.1.3-alpha.1 master 检出核验（完整门禁链 + profile 安装冒烟）。 |
+| Harness | DeepSeek Harness `dsh-v0.1.3-alpha.1`（2026-09-02 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。已于 2026-09-06 对照 dsh-v0.1.3-alpha.1 master 检出核验（完整门禁链 + profile 安装冒烟）。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 后端 | OpenTelemetry OTLP/HTTP（traces + metrics，JSON 编码）与 Langfuse（LLM 可观测）——二选一或同时 |
 | 模型 | 与模型无关：它导出 session/event 流，自身不调用任何模型 |
