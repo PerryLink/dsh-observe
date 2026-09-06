@@ -169,7 +169,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ## Known limitations
 
-- **仅 alpha.5** —— 插件针对 `@deepseek-ai/dsh@0.1.2-rc.1` 开发与测试；更新的 harness 基线预期可用，由月度 compat 工作流验证。
+- **npm 0.1.2-rc.1** —— 插件针对 `@deepseek-ai/dsh@0.1.2-rc.1` 开发与测试；更新的 harness 基线预期可用，由月度 compat 工作流验证。
 - **Metrics 不走重试/缓冲路径** —— OTLP metrics 按累计聚合，丢失一次 flush 会在下一次自愈（设计如此，非缺陷）。
 - **无采样** —— 每个启用的 span 族都会导出；大流量会话请调整 `capture.*` 开关与 `batch.maxBufferRecords`。
 

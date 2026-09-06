@@ -170,7 +170,7 @@ This plugin registers **no model tools** — it is a background exporter. Its su
 
 ## Known limitations
 
-- **alpha.5 line** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.2-rc.1`; the rc.2 line stays covered by the monthly compat workflow.
+- **npm 0.1.2-rc.1** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.2-rc.1`; newer harness baselines stay covered by the monthly compat workflow.
 - **Metrics bypass the retry/spool path** — OTLP metrics are aggregated cumulatively, so a lost flush self-heals on the next one (by design, not a bug).
 - **No sampling** — every enabled span family is exported; set `capture.*` switches and `batch.maxBufferRecords` for high-volume sessions.
 

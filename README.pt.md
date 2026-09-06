@@ -169,7 +169,7 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 
 ## Known limitations
 
-- **Somente alpha.5** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.2-rc.1`; baselines mais novos devem funcionar e são verificados pelo workflow compat mensal.
+- **npm 0.1.2-rc.1** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.2-rc.1`; baselines mais novos devem funcionar e são verificados pelo workflow compat mensal.
 - **Métricas evitam o caminho de tentativa/spool** — as métricas OTLP são agregadas cumulativamente, então um flush perdido se autocura no seguinte (por design, não é um bug).
 - **Sem amostragem** — toda família de spans habilitada é exportada; ajuste os interruptores `capture.*` e `batch.maxBufferRecords` para sessões de alto volume.
 
