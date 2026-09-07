@@ -34,6 +34,7 @@ export { Config, resolveConfig } from './config.ts'
 export type { ResolvedConfig, PricingRule, SanitizeConfig, BatchConfig, RetryConfig, OtlpConfig, LangfuseConfig } from './config.ts'
 export { VERSION } from './version.ts'
 export { REDACTED, sanitizeJson, sanitizeJsonText, sanitizeText, truncate } from './sanitize.ts'
+/** Service Definition — the public wire contract: span/metric/export records and the remote ObserveStatus interface. */
 export type { SpanRecord, MetricRecord, ExportRecord, TokenCounts, SpanKind } from './model.ts'
 export type { ObserveStatus, ObserveSetEnabledResult } from './wire.ts'
 
@@ -138,6 +139,7 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     }
   })
 
+  // Consumer — consumes the harness session/event stream (and the optional tokenMeter) and feeds the export pipeline.
   ctx.on('session/event', (session: Session, event: SessionEvent) => {
     try {
       collector.handleEvent(session, event)
@@ -162,6 +164,7 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
   })
 
   if (resolved.remote) {
+    // Service Provider — registers the optional Typert remote service (observe/status, observe/setEnabled) via ctx.plugin.
     const depthOf = (backend: 'otlp' | 'langfuse'): number =>
       pipelines.find(pipeline => pipeline.name === backend)?.depth ?? 0
     await ctx.plugin(observeRemotePlugin({
