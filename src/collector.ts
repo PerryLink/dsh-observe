@@ -7,7 +7,8 @@
  * with an error status at the latest observed event time. Everything
  * exported is reconstructable from the session log alone — the collector
  * invents no model-visible content, and prompt/completion bodies come from
- * the logged header and the session surface.
+ * the session surface and the logged header (call config and tools). The
+ * system prompt is surface node 0, a `system/message` event (host 0.1.5).
  * @module dsh-observe/collector
  */
 
@@ -88,13 +89,11 @@ function normalizeUsage(usage: TokenUsage | undefined): TokenCounts | undefined 
 
 /**
  * Whether a stream chunk carries visible model output (the first-token
- * boundary). Local replication of the rc.2 `@deepseek-ai/dsh-llm/message`
- * `isTokenDelta` helper, which host 0.1.2-alpha.1 removed from that module:
- * the host's whole-log sessionStats projection now inlines the same switch
- * (`packages/session/session-stats/src/projection.ts`), and the chunk
- * grammar itself is unchanged, so this predicate stays identical on both
- * rulers. Empty deltas (heartbeats, empty tool-call frames) do not count as
- * a first token.
+ * boundary). Local copy of the predicate host 0.1.5 exports as
+ * `isTokenDelta` from `@deepseek-ai/dsh-llm/assistant-stream`; kept local
+ * because the 0.1.2-rc.1 line has no such export and the chunk grammar is
+ * unchanged, so the switch below stays identical on both rulers. Empty
+ * deltas (heartbeats, empty tool-call frames) do not count as a first token.
  * @param chunk - the stream chunk to test.
  * @returns true when the chunk contains a non-empty text/reasoning/tool delta.
  */
@@ -111,10 +110,10 @@ function isTokenDelta(chunk: StreamChunk): boolean {
 }
 
 /**
- * Local minimal structural type for one record of the v2
- * `assistant/message` embedded stream (`AssistantStreamRecord` on host
- * 0.1.3-alpha.1, which is not published to npm). The pinned 0.1.2-rc.1
- * types have no `stream` field, so the read is structural only.
+ * Local minimal structural type for one record of the embedded assistant
+ * stream (`AssistantStreamRecord` on host 0.1.5-alpha.1). Kept structural so
+ * one source serves both supported lines: the 0.1.2-rc.1 types have neither
+ * an `assistant/message.stream` field nor an `assistant/attempt` event.
  */
 interface EmbeddedStreamRecord {
   readonly type: 'text-chunks' | 'reasoning-chunks' | 'tool-call-chunks' | 'chunk'
@@ -127,15 +126,15 @@ interface EmbeddedStreamRecord {
 }
 
 /**
- * Recover finish reason and first-token timing from the v2 embedded stream
- * when an `assistant/message` event carries one. On the pinned rc.1 line the
- * field is absent and the legacy `assistant/chunk` branch keeps doing the
- * work; on 0.1.3-alpha.1 `assistant/chunk` no longer exists, so this path is
- * the only source for those two span fields. Compact runs carry member i at
- * `time0 + sum(dt[0..i-1])`; every member is a token-delta boundary, so the
- * run's first non-empty member is the first token.
+ * Recover finish reason and first-token timing from an embedded assistant
+ * stream. Host 0.1.5 carries the exact timed model stream on the required
+ * `assistant/message.stream` field and, for a failed/cancelled/stream-errored
+ * attempt that never commits a message, on `assistant/attempt.stream`; the
+ * removed `assistant/chunk` events were the rc.1-only equivalent. Compact runs
+ * carry member i at `time0 + sum(dt[0..i-1])`; every member is a token-delta
+ * boundary, so the run's first non-empty member is the first token.
  * @param state - the open step state to fill.
- * @param data - the `assistant/message` event data.
+ * @param data - the event data carrying the stream.
  */
 function consumeEmbeddedStream(state: SessionState, data: unknown): void {
   const stream = (data as { stream?: unknown } | undefined)?.stream
@@ -216,18 +215,15 @@ export class Collector {
       case 'request/context':
         state.context = event.data
         break
-      case 'assistant/chunk':
-        if (state.step !== undefined) {
-          if (event.data.chunk.type === 'finish') {
-            state.step.finishReason = event.data.chunk.reason.kind
-          } else if (state.step.firstChunkUnixNano === undefined && isTokenDelta(event.data.chunk)) {
-            state.step.firstChunkUnixNano = event.time * NANO
-          }
-        }
-        break
       case 'assistant/message':
         consumeEmbeddedStream(state, event.data)
         this.assistantMessage(session, state, event)
+        break
+      case 'assistant/attempt':
+        // 0.1.3+ logs a failed, cancelled, or stream-errored attempt as its own
+        // event with no assistant/message following, so its stream is the only
+        // source for the dangling LLM span's finish reason and first token.
+        consumeEmbeddedStream(state, event.data)
         break
       case 'tool/call':
         this.toolCall(session, state, event)
@@ -242,8 +238,32 @@ export class Collector {
         this.turnEnd(session, state, event)
         break
       default:
-        // Unknown or plugin-owned session events: nothing to export.
+        // Unknown or plugin-owned session events. The published 0.1.2-rc.1
+        // line still streams `assistant/chunk`, which host commit f99b06eaed
+        // removed from SessionEventMap, so read it structurally when present.
+        this.legacyChunk(state, event)
         break
+    }
+  }
+
+  /**
+   * Fold one legacy `assistant/chunk` event. The type is absent from the
+   * 0.1.3+ SessionEventMap (streams are embedded in `assistant/message` and
+   * `assistant/attempt`), so the read is structural and only the 0.1.2-rc.1
+   * runtime line ever reaches it.
+   * @param state - the session state.
+   * @param event - the appended event.
+   */
+  private legacyChunk(state: SessionState, event: SessionEvent): void {
+    const legacy = event as unknown as { type: string; time: number; data?: { chunk?: StreamChunk } }
+    if (legacy.type !== 'assistant/chunk') return
+    const chunk = legacy.data?.chunk
+    const step = state.step
+    if (chunk === undefined || step === undefined) return
+    if (chunk.type === 'finish') {
+      step.finishReason = chunk.reason.kind
+    } else if (step.firstChunkUnixNano === undefined && isTokenDelta(chunk)) {
+      step.firstChunkUnixNano = legacy.time * NANO
     }
   }
 
@@ -600,10 +620,15 @@ export class Collector {
     }
   }
 
-  /** The sanitized prompt snapshot: logged system prompt plus the current session surface. */
+  /**
+   * The sanitized prompt snapshot: the current session surface, whose node 0
+   * is the rendered system prompt (`system/message`, host 0.1.5), plus the
+   * legacy logged `header.system` when a 0.1.2-rc.1 runtime still stamps it.
+   */
   private capturePrompt(session: Session, header: EpochHeader | undefined): string {
     const parts: string[] = []
-    if (header?.system !== undefined) parts.push(header.system)
+    const legacySystem = (header as unknown as { system?: string } | undefined)?.system
+    if (legacySystem !== undefined) parts.push(legacySystem)
     // alpha.5 renamed the Session.events getter to snapshotEvents(); older hosts
     // (the >=0.1.0-rc.8 peer floor) still expose .events, so detect at runtime.
     const events = typeof session.snapshotEvents === 'function'
