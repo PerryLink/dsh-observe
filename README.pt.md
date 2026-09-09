@@ -25,7 +25,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.3-alpha.1` (adaptado em 2026-09-02): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. Verificado em 2026-09-06 contra o checkout master dsh-v0.1.3-alpha.1 (cadeia completa de portas + smoke de instalação de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.5-alpha.1` (adaptado em 2026-09-09): o formato de sessão V3 embute o fluxo do assistente em `assistant/message` / `assistant/attempt` e representa o prompt de sistema como nó 0 da superfície (`system/message`); o plugin consome apenas o fluxo de eventos ao vivo e nunca lê arquivos de log de sessão. Verificado em 2026-09-09 contra a tag dsh-v0.1.5-alpha.1 (cadeia completa de portas local; o workflow compat mensal cobre o smoke de instalação de perfil). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificação JSON) e Langfuse (observabilidade de LLM) — um ou ambos |
 | Modelo | Independente de modelo: exporta o fluxo `session/event`; não faz chamadas a modelos |
@@ -165,11 +165,11 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 - **Sanear antes de enviar** — redação estrutural de chaves, padrões de segredos embutidos (chaves de API, tokens do GitHub, chaves da AWS, credenciais bearer, chaves privadas), seus padrões e orçamentos de caracteres aplicam-se antes de qualquer registro sair da memória.
 - **Re-validação no limite durável** — registros lidos do armazenamento são checados novamente antes que um sink possa vê-los.
 - **Falha ruidosa, falha contida** — falhas de exportação avisam, contam, tentam de novo e por fim vão para o spool; um manipulador de sessão que falha é capturado e registrado, de modo que a observabilidade nunca pode quebrar o caminho quente do harness.
-- **Model-visible ⟺ logged** — as exportações de prompt/completion projetam apenas o cabeçalho registrado e a superfície da sessão; o exportador não inventa conteúdo.
+- **Model-visible ⟺ logged** — as exportações de prompt/completion projetam apenas a superfície da sessão (cujo nó 0 é o prompt de sistema) e o cabeçalho registrado (configuração da chamada e ferramentas); o exportador não inventa conteúdo.
 
 ## Known limitations
 
-- **npm 0.1.2-rc.1** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.2-rc.1`; baselines mais novos devem funcionar e são verificados pelo workflow compat mensal.
+- **npm 0.1.5-alpha.1** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.5-alpha.1` (devDeps e CI fixados); o intervalo de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` mantém a linha rc.1 publicada instalável, e o workflow compat mensal cobre baselines mais novos.
 - **Métricas evitam o caminho de tentativa/spool** — as métricas OTLP são agregadas cumulativamente, então um flush perdido se autocura no seguinte (por design, não é um bug).
 - **Sem amostragem** — toda família de spans habilitada é exportada; ajuste os interruptores `capture.*` e `batch.maxBufferRecords` para sessões de alto volume.
 
@@ -177,9 +177,9 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests contra o checkout local do harness
-pnpm run typecheck:ci  # tsc contra os tipos publicados 0.1.2-rc.1 (sem paths)
-pnpm test           # vitest: 95 testes, 13 suítes (Context/Session/storage seam reais)
+pnpm run typecheck  # tsc: src + tests contra os devDeps fixados 0.1.5-alpha.1 (sem tsconfig paths)
+pnpm run typecheck:ci  # tsc contra os tipos publicados 0.1.5-alpha.1 (sem paths)
+pnpm test           # vitest: 124 testes, 18 suítes (Context/Session/storage seam reais)
 pnpm run test:coverage  # porta de cobertura (90/80/90/90)
 pnpm run build      # bundle tsdown + declarações tsc (lib/)
 pnpm run verify:self-contained  # as especificações de dependências resolvem pelo registry

@@ -25,7 +25,7 @@
 
 | 方面 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.3-alpha.1`（2026-09-02 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。已于 2026-09-06 对照 dsh-v0.1.3-alpha.1 master 检出核验（完整门禁链 + profile 安装冒烟）。 |
+| Harness | DeepSeek Harness `dsh-v0.1.5-alpha.1`（2026-09-09 已适配）：会话格式 V3 把助手流内嵌到 `assistant/message` / `assistant/attempt`，系统提示词成为 surface 节点 0（`system/message`）；本插件只消费实时事件流，从不读取会话日志文件。已于 2026-09-09 对照 dsh-v0.1.5-alpha.1 tag 核验（本地完整门禁链；profile 安装冒烟由月度 compat 工作流覆盖）。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 后端 | OpenTelemetry OTLP/HTTP（traces + metrics，JSON 编码）与 Langfuse（LLM 可观测）——二选一或同时 |
 | 模型 | 与模型无关：它导出 session/event 流，自身不调用任何模型 |
@@ -165,11 +165,11 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 - **发送前脱敏** —— 结构性键名脱敏、内置密钥模式（API key、GitHub token、AWS key、bearer 凭据、私钥）、自定义模式与字符预算，全部在任何记录离开内存前生效。
 - **持久边界再校验** —— 从存储读回的记录在到达 sink 前再次检查。
 - **失败大声、失败隔离** —— 导出失败会告警、计数、重试并最终入缓冲；会话事件处理失败被捕获并记录，可观测性永远不会拖垮 harness 热路径。
-- **模型可见 ⟺ 已记录** —— prompt/completion 导出只投影已记录的 header 与会话 surface；导出器不发明任何内容。
+- **模型可见 ⟺ 已记录** —— prompt/completion 导出只投影会话 surface（其节点 0 即系统提示词）与已记录的 header（调用配置与工具）；导出器不发明任何内容。
 
 ## Known limitations
 
-- **npm 0.1.2-rc.1** —— 插件针对 `@deepseek-ai/dsh@0.1.2-rc.1` 开发与测试；更新的 harness 基线预期可用，由月度 compat 工作流验证。
+- **npm 0.1.5-alpha.1** —— 插件针对 `@deepseek-ai/dsh@0.1.5-alpha.1` 开发与测试（devDeps 与 CI 均钉此版本）；peer 复合范围 `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` 保持已发布的 rc.1 线可安装，更新的 harness 基线由月度 compat 工作流验证。
 - **Metrics 不走重试/缓冲路径** —— OTLP metrics 按累计聚合，丢失一次 flush 会在下一次自愈（设计如此，非缺陷）。
 - **无采样** —— 每个启用的 span 族都会导出；大流量会话请调整 `capture.*` 开关与 `batch.maxBufferRecords`。
 
@@ -177,9 +177,9 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc：src + tests，对照本地 harness checkout
-pnpm run typecheck:ci  # tsc：对照已发布的 0.1.2-rc.1 类型（无 paths）
-pnpm test           # vitest：95 个测试、13 个套件（真实 Context/Session/storage 接缝）
+pnpm run typecheck  # tsc：src + tests，对照钉定的 0.1.5-alpha.1 devDeps（无 tsconfig paths）
+pnpm run typecheck:ci  # tsc：对照已发布的 0.1.5-alpha.1 类型（无 paths）
+pnpm test           # vitest：124 个测试、18 个套件（真实 Context/Session/storage 接缝）
 pnpm run test:coverage  # 覆盖率门禁（90/80/90/90）
 pnpm run build      # tsdown bundle + tsc 声明（lib/）
 pnpm run verify:self-contained  # 依赖声明全部来自 registry

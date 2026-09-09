@@ -25,7 +25,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.3-alpha.1` (adaptado el 2026-09-02): el sobre de sesión conserva su campo ignorable solo para compatibilidad de lectura de logs almacenados - Session.append aún no puede estamparlo, por lo que el comportamiento de la puerta no cambia. Verificado el 2026-09-06 contra el master checkout dsh-v0.1.3-alpha.1 (cadena completa de puertas + smoke de instalación de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.5-alpha.1` (adaptado el 2026-09-09): el formato de sesión V3 incorpora el flujo del asistente en `assistant/message` / `assistant/attempt` y representa el prompt de sistema como nodo 0 de la superficie (`system/message`); el plugin consume solo el flujo de eventos en vivo y nunca lee archivos de log de sesión. Verificado el 2026-09-09 contra el tag dsh-v0.1.5-alpha.1 (cadena completa de puertas local; el workflow compat mensual cubre el smoke de instalación de perfil). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificación JSON) y Langfuse (observabilidad de LLM) — uno o ambos |
 | Modelo | Independiente del modelo: exporta el flujo `session/event`; no realiza llamadas a modelos |
@@ -165,11 +165,11 @@ Este plugin **no registra herramientas de modelo** — es un exportador en segun
 - **Sanear antes de enviar** — redacción estructural de claves, patrones de secretos integrados (claves de API, tokens de GitHub, claves de AWS, credenciales bearer, claves privadas), tus patrones y presupuestos de caracteres se aplican antes de que un registro salga de memoria.
 - **Re-validación en el límite duradero** — los registros leídos del almacenamiento se comprueban de nuevo antes de que un sink pueda verlos.
 - **Fallo ruidoso, fallo contenido** — los fallos de exportación avisan, cuentan, reintentan y finalmente se guardan en el spool; un manejador de sesión que falla se captura y registra, de modo que la observabilidad nunca puede romper la ruta caliente del harness.
-- **Model-visible ⟺ logged** — las exportaciones de prompt/completion proyectan solo la cabecera registrada y la superficie de sesión; el exportador no inventa contenido.
+- **Model-visible ⟺ logged** — las exportaciones de prompt/completion proyectan solo la superficie de sesión (cuyo nodo 0 es el prompt de sistema) y la cabecera registrada (configuración de llamada y herramientas); el exportador no inventa contenido.
 
 ## Known limitations
 
-- **npm 0.1.2-rc.1** — el plugin se desarrolla y prueba contra `@deepseek-ai/dsh@0.1.2-rc.1`; se espera que baselines más nuevos funcionen y el workflow compat mensual los verifica.
+- **npm 0.1.5-alpha.1** — el plugin se desarrolla y prueba contra `@deepseek-ai/dsh@0.1.5-alpha.1` (devDeps y CI fijados); el rango de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` mantiene instalable la línea rc.1 publicada, y el workflow compat mensual cubre baselines más nuevos.
 - **Las métricas evitan la ruta de reintento/spool** — las métricas OTLP se agregan de forma acumulativa, así que un flush perdido se autocura en el siguiente (por diseño, no es un fallo).
 - **Sin muestreo** — toda familia de spans habilitada se exporta; ajusta los interruptores `capture.*` y `batch.maxBufferRecords` para sesiones de alto volumen.
 
@@ -177,9 +177,9 @@ Este plugin **no registra herramientas de modelo** — es un exportador en segun
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests contra el checkout local del harness
-pnpm run typecheck:ci  # tsc contra los tipos publicados 0.1.2-rc.1 (sin paths)
-pnpm test           # vitest: 114 tests, 18 suites (Context/Session/storage seam reales)
+pnpm run typecheck  # tsc: src + tests contra los devDeps fijados 0.1.5-alpha.1 (sin tsconfig paths)
+pnpm run typecheck:ci  # tsc contra los tipos publicados 0.1.5-alpha.1 (sin paths)
+pnpm test           # vitest: 124 tests, 18 suites (Context/Session/storage seam reales)
 pnpm run test:coverage  # puerta de cobertura (90/80/90/90)
 pnpm run build      # bundle tsdown + declaraciones tsc (lib/)
 pnpm run verify:self-contained  # las especificaciones de dependencias resuelven desde el registry
