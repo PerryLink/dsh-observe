@@ -1,12 +1,13 @@
 /**
- * The session/event collector over a REAL Session from the 0.1.1-rc.2 peers:
+ * The session/event collector over a REAL Session from the 0.1.5-alpha.1 peers:
  * turn/step/tool/llm span lifecycles, retry derivation, missing-closer error
  * closure, sanitized prompt/completion capture, usage/cost metrics, and the
  * optional token-meter context gauge. No mocked harness services.
  * @module dsh-observe/test/collector.spec
  */
 
-import { createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm/message'
+import type { AssistantStreamRecord, StreamChunk } from '@deepseek-ai/dsh-llm'
+import { createAssistantMessage, createSystemMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm/message'
 import type { Session, SessionEvent, SessionEventMap, SessionEventType } from '@deepseek-ai/dsh-session'
 import { describe, expect, it } from 'vitest'
 import { resolveConfig, type Config } from '../src/config.ts'
@@ -62,26 +63,46 @@ function feedSurface<T extends SessionEventType>(
   handle(append.call(session, type, data, { surfaceOp: 'append' }))
 }
 
+/** Append one event shape the 0.1.3+ host no longer knows (the removed rc.1 wire form). */
+function feedLegacy(
+  session: Session,
+  handle: (event: SessionEvent) => void,
+  type: string,
+  data: unknown,
+): void {
+  const append = session.append as unknown as (eventType: string, eventData: unknown) => SessionEvent
+  handle(append.call(session, type, data))
+}
+
 /** The standard happy-path log one test family drives. */
 function happyPath(session: Session, handle: (event: SessionEvent) => void): void {
   feed(session, handle, 'turn/start', { turn: 1 })
+  feed(session, handle, 'step/start', { turn: 1, step: 1 })
+  // Host 0.1.5 appends the rendered system prompt as surface node 0, before the
+  // step's first user/message and before request/header (agent.ts:364-379).
+  feedSurface(session, handle, 'system/message', {
+    turn: 1,
+    step: 1,
+    message: createSystemMessage('You are helpful. token sk-abc12345678901234', 'test'),
+  })
   feedSurface(session, handle, 'user/message', createUserMessage({
     content: [{ type: 'text', text: 'hello' }],
     source: { kind: 'user' },
   }))
-  feed(session, handle, 'step/start', { turn: 1, step: 1 })
   feed(session, handle, 'request/header', {
-    header: { config: { provider: 'deepseek', model: 'deepseek-chat' }, system: 'You are helpful. token sk-abc12345678901234' },
+    header: { config: { provider: 'deepseek', model: 'deepseek-chat' } },
     reason: 'initial',
   })
-  feed(session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'Hi' } })
-  feed(session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'finish', reason: { kind: 'stop' } } })
   feed(session, handle, 'tool/call', { turn: 1, step: 1, callId: CallId('c1'), name: 'bash', arguments: '{"command":"ls","api_key":"secret-value"}' })
   feedSurface(session, handle, 'tool/result', {
     turn: 1,
     step: 1,
     message: createToolResultMessage({ callId: CallId('c1'), content: [{ type: 'text', text: 'file.txt' }], isError: false }),
   })
+  const stream: AssistantStreamRecord[] = [
+    { type: 'text-chunks', time0: Date.now(), index: 0, dt: [1], texts: ['I ', 'ran it.'] },
+    { type: 'chunk', time: Date.now() + 2, chunk: { type: 'finish', reason: { kind: 'stop' } } },
+  ]
   feedSurface(session, handle, 'assistant/message', {
     turn: 1,
     step: 1,
@@ -89,6 +110,7 @@ function happyPath(session: Session, handle: (event: SessionEvent) => void): voi
       content: [{ type: 'text', text: 'I ran it.' }],
       source: { provider: 'deepseek', model: 'deepseek-chat' },
     }),
+    stream,
     usage: { inputTokens: 100, outputTokens: 50, cacheReadTokens: 20, reasoningTokens: 10 },
   })
   feed(session, handle, 'step/end', { turn: 1, step: 1 })
@@ -141,20 +163,24 @@ describe('collector happy path', () => {
     }
   })
 
-  it('recovers finish reason and first-token timing from the v2 embedded stream', async () => {
+  it('recovers finish reason and first-token timing from the embedded stream', async () => {
     const base = await mountBase('collector-v2-stream')
     try {
       const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
       feed(base.session, handle, 'turn/start', { turn: 1 })
       feed(base.session, handle, 'step/start', { turn: 1, step: 1 })
       feed(base.session, handle, 'request/header', {
-        header: { config: { provider: 'deepseek', model: 'deepseek-chat' }, system: 'sys' },
+        header: { config: { provider: 'deepseek', model: 'deepseek-chat' } },
         reason: 'initial',
       })
-      // 0.1.3-alpha.1 carries the whole stream inside assistant/message and
-      // never emits assistant/chunk; the pinned rc.1 runtime accepts the
-      // extra JSON key, so the fixture rides a real append roundtrip.
-      const v2Data = {
+      // 0.1.3+ carries the whole timed stream inside assistant/message and never
+      // emits assistant/chunk; the required `stream` field is what the host
+      // appends for a committed attempt (agent.ts:405-419).
+      const stream: AssistantStreamRecord[] = [
+        { type: 'text-chunks', time0: Date.now() + 500, index: 0, dt: [1], texts: ['Hi', '!'] },
+        { type: 'chunk', time: Date.now() + 510, chunk: { type: 'finish', reason: { kind: 'stop' } } },
+      ]
+      feedSurface(base.session, handle, 'assistant/message', {
         turn: 1,
         step: 1,
         message: createAssistantMessage({
@@ -162,12 +188,8 @@ describe('collector happy path', () => {
           source: { provider: 'deepseek', model: 'deepseek-chat' },
         }),
         usage: { inputTokens: 10, outputTokens: 5 },
-        stream: [
-          { type: 'text-chunks', time0: Date.now() + 500, index: 0, dt: [1], texts: ['Hi', '!'] },
-          { type: 'chunk', time: Date.now() + 510, chunk: { type: 'finish', reason: { kind: 'stop' } } },
-        ],
-      }
-      feedSurface(base.session, handle, 'assistant/message', v2Data as unknown as SessionEventMap['assistant/message'])
+        stream,
+      })
       feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
       feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
 
@@ -209,31 +231,33 @@ describe('collector happy path', () => {
 })
 
 describe('collector first-token detection', () => {
-  it('marks the first non-empty delta of each kind as the first token', async () => {
+  it('marks the first non-empty member of each embedded record kind as the first token', async () => {
     const base = await mountBase('collector-first-token')
     try {
       const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
       feed(base.session, handle, 'turn/start', { turn: 1 })
-      const steps: [number, SessionEventMap['assistant/chunk']['chunk']][] = [
-        [1, { type: 'reasoning-delta', index: 0, text: 'thinking' }],
-        [2, { type: 'tool-call-delta', index: 0, id: CallId('t1'), name: 'bash', argumentsDelta: '' }],
-        [3, { type: 'tool-call-delta', index: 0, id: CallId('t2'), argumentsDelta: '{"a":1}' }],
+      const t0 = Date.now()
+      const steps: [number, AssistantStreamRecord[]][] = [
+        [1, [{ type: 'text-chunks', time0: t0, index: 0, dt: [1, 2], texts: ['', 'Hi'] }]],
+        [2, [{ type: 'reasoning-chunks', time0: t0, index: 0, dt: [1], texts: ['thinking'] }]],
+        [3, [{ type: 'tool-call-chunks', time0: t0, index: 0, dt: [1, 2], id: CallId('t1'), args: ['', '{"a":1}'] }]],
+        [4, [{ type: 'chunk', time: t0, chunk: { type: 'tool-call-delta', index: 0, id: CallId('t2'), name: 'bash', argumentsDelta: '' } }]],
       ]
-      for (const [step, chunk] of steps) {
+      for (const [step, stream] of steps) {
         feed(base.session, handle, 'step/start', { turn: 1, step })
         feed(base.session, handle, 'request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' })
-        feed(base.session, handle, 'assistant/chunk', { turn: 1, step, chunk })
         feedSurface(base.session, handle, 'assistant/message', {
           turn: 1,
           step,
           message: createAssistantMessage({ content: [{ type: 'text', text: 'ok' }], source: { provider: 'p', model: 'm' } }),
+          stream,
         })
         feed(base.session, handle, 'step/end', { turn: 1, step })
       }
       feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
 
       const llms = spans.filter(span => span.kind === 'llm')
-      expect(llms).toHaveLength(3)
+      expect(llms).toHaveLength(4)
       for (const llm of llms) expect(typeof llm.llm?.ttftMs).toBe('number')
     } finally {
       await unmountBase(base)
@@ -247,17 +271,21 @@ describe('collector first-token detection', () => {
       feed(base.session, handle, 'turn/start', { turn: 1 })
       feed(base.session, handle, 'step/start', { turn: 1, step: 1 })
       feed(base.session, handle, 'request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' })
-      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: '' } })
-      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'block-start', index: 0, blockType: 'text' } })
-      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'reasoning-delta', index: 0, text: '' } })
-      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 0, outputTokens: 0 } } })
-      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'tool-call-delta', index: 0, id: CallId('t1'), argumentsDelta: '' } })
-      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'block-end', index: 0, block: { type: 'text', text: '' } } })
-      feed(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'finish', reason: { kind: 'stop' } } })
+      const t0 = Date.now()
+      const stream: AssistantStreamRecord[] = [
+        { type: 'text-chunks', time0: t0, index: 0, dt: [1], texts: [''] },
+        { type: 'chunk', time: t0 + 2, chunk: { type: 'block-start', index: 0, blockType: 'text' } },
+        { type: 'reasoning-chunks', time0: t0 + 3, index: 1, dt: [1], texts: [''] },
+        { type: 'chunk', time: t0 + 4, chunk: { type: 'usage', usage: { inputTokens: 0, outputTokens: 0 } } },
+        { type: 'tool-call-chunks', time0: t0 + 5, index: 2, dt: [1], id: CallId('t1'), args: [''] },
+        { type: 'chunk', time: t0 + 6, chunk: { type: 'block-end', index: 0, block: { type: 'text', text: '' } } },
+        { type: 'chunk', time: t0 + 7, chunk: { type: 'finish', reason: { kind: 'stop' } } },
+      ]
       feedSurface(base.session, handle, 'assistant/message', {
         turn: 1,
         step: 1,
         message: createAssistantMessage({ content: [{ type: 'text', text: 'ok' }], source: { provider: 'p', model: 'm' } }),
+        stream,
       })
       feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
       feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
@@ -266,6 +294,67 @@ describe('collector first-token detection', () => {
       expect(llm?.status).toBe('ok')
       expect(llm?.llm?.finishReason).toBe('stop')
       expect(llm?.llm?.ttftMs).toBeUndefined()
+    } finally {
+      await unmountBase(base)
+    }
+  })
+})
+
+describe('collector removed rc.1 chunk events', () => {
+  it('recovers finish reason and first-token timing from a structurally read assistant/chunk', async () => {
+    const base = await mountBase('collector-legacy-chunk')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      feed(base.session, handle, 'turn/start', { turn: 1 })
+      // No open step yet: the structural fallback must ignore the chunk.
+      feedLegacy(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'x' } })
+      feed(base.session, handle, 'step/start', { turn: 1, step: 1 })
+      // A payload without a chunk is ignored as well.
+      feedLegacy(base.session, handle, 'assistant/chunk', {})
+      feed(base.session, handle, 'request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' })
+      // A non-delta chunk must not become the first token.
+      feedLegacy(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'block-start', index: 0, blockType: 'text' } })
+      const delta: StreamChunk = { type: 'text-delta', index: 0, text: 'Hi' }
+      feedLegacy(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: delta })
+      feedLegacy(base.session, handle, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'finish', reason: { kind: 'stop' } } })
+      feedSurface(base.session, handle, 'assistant/message', {
+        turn: 1,
+        step: 1,
+        message: createAssistantMessage({ content: [{ type: 'text', text: 'Hi' }], source: { provider: 'p', model: 'm' } }),
+        stream: [],
+      })
+      feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
+      feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.llm?.finishReason).toBe('stop')
+      expect(typeof llm?.llm?.ttftMs).toBe('number')
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  it('recovers the dangling llm span from a failed assistant/attempt stream', async () => {
+    const base = await mountBase('collector-attempt')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      feed(base.session, handle, 'turn/start', { turn: 1 })
+      feed(base.session, handle, 'step/start', { turn: 1, step: 1 })
+      feed(base.session, handle, 'request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' })
+      // A stream-errored attempt commits no assistant/message, so only the
+      // attempt event carries the timed stream (host types.ts:323-327).
+      const stream: AssistantStreamRecord[] = [
+        { type: 'text-chunks', time0: Date.now(), index: 0, dt: [1], texts: ['partial'] },
+        { type: 'chunk', time: Date.now() + 1, chunk: { type: 'finish', reason: { kind: 'max-tokens' } } },
+      ]
+      feed(base.session, handle, 'assistant/attempt', { turn: 1, step: 1, stream })
+      feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
+      feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.status).toBe('error')
+      expect(llm?.attributes['observe.incomplete']).toBe(true)
+      expect(llm?.llm?.finishReason).toBe('max-tokens')
     } finally {
       await unmountBase(base)
     }
