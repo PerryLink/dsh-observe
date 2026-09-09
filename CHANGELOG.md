@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.10] - 2026-09-09
+
+### Fixed
+
+- Adapt the collector to the host 0.1.5 session event vocabulary: `assistant/chunk` was removed from `SessionEventMap` (host commit `f99b06eaed`) and `EpochHeader.system` was removed (host commit `ee956c720d`). Finish reason and first-token timing now come from the required `assistant/message.stream` and the new `assistant/attempt.stream`; the system prompt is read from surface node 0 (`system/message`) instead of the header. The published `0.1.2-rc.1` runtime line keeps working through structural reads of the legacy `assistant/chunk` events and the legacy `header.system` field.
+- Read `assistant/attempt.stream`, so a failed, cancelled, or stream-errored attempt that commits no message still contributes the dangling LLM span's finish reason instead of leaving it empty.
+
+### Changed
+
+- Pin the devDependencies and the CI/compat probes to `@deepseek-ai/dsh@0.1.5-alpha.1`; the peer range stays the composite `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`, and `dshWorkshop.compatibility.dshVersions` lists both baselines.
+- Rewrite the collector fixtures to the V3 event shapes (embedded streams, `system/message` as surface node 0) and add coverage for the legacy rc.1 chunk fallback and the failed-attempt stream: 124 tests across 18 suites.
+
+### Docs
+
+- Refresh the five-language README compatibility sections: harness `dsh-v0.1.5-alpha.1` verified 2026-09-09, devDeps `0.1.5-alpha.1`, the composite peer range, and the corrected typecheck/test-count lines; align AGENTS.md with the 0.1.5 seams.
+
 ## [0.2.9] - 2026-09-07
 
 ### Docs
