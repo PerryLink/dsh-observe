@@ -27,7 +27,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-alpha.1` (adapted 2026-09-09): session format V3 embeds the assistant stream in `assistant/message` / `assistant/attempt` and represents the system prompt as surface node 0 (`system/message`); the plugin consumes only the live event stream and never reads session log files. Verified 2026-09-09 against the dsh-v0.1.5-alpha.1 tag (full local gate chain; the monthly compat workflow covers the profile install smoke). |
+| Harness | DeepSeek Harness `dsh-v0.1.5-rc.1` (adapted 2026-09-09): session format V3 embeds the assistant stream in `assistant/message` / `assistant/attempt` and represents the system prompt as surface node 0 (`system/message`); the plugin consumes only the live event stream and never reads session log files. Verified 2026-09-10 against the dsh-v0.1.5-rc.1 tag (full local gate chain; the monthly compat workflow covers the profile install smoke). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, JSON encoding) and Langfuse (LLM observability) — either or both |
 | Model | Model-agnostic: it exports the session/event stream; no model calls are made |
@@ -171,7 +171,7 @@ This plugin registers **no model tools** — it is a background exporter. Its su
 
 ## Known limitations
 
-- **npm 0.1.5-alpha.1** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.5-alpha.1` (devDeps and CI pinned); the peer range `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` keeps the published rc.1 line installable, and the monthly compat workflow covers newer baselines.
+- **npm 0.1.5-rc.1** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.5-rc.1` (devDeps and CI pinned); the peer range `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` keeps the published rc.1 line installable, and the monthly compat workflow covers newer baselines.
 - **Metrics bypass the retry/spool path** — OTLP metrics are aggregated cumulatively, so a lost flush self-heals on the next one (by design, not a bug).
 - **No sampling** — every enabled span family is exported; set `capture.*` switches and `batch.maxBufferRecords` for high-volume sessions.
 
@@ -179,8 +179,8 @@ This plugin registers **no model tools** — it is a background exporter. Its su
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests against the pinned 0.1.5-alpha.1 devDeps (no tsconfig paths)
-pnpm run typecheck:ci  # tsc against the published 0.1.5-alpha.1 types (no paths)
+pnpm run typecheck  # tsc: src + tests against the pinned 0.1.5-rc.1 devDeps (no tsconfig paths)
+pnpm run typecheck:ci  # tsc against the published 0.1.5-rc.1 types (no paths)
 pnpm test           # vitest: 124 tests, 18 suites (real Context/Session/storage seam)
 pnpm run test:coverage  # coverage gate (90/80/90/90)
 pnpm run build      # tsdown bundle + tsc declarations (lib/)

@@ -26,7 +26,7 @@
 
 | सतह | स्थिति |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-alpha.1` (2026-09-09 को अनुकूलित): सत्र प्रारूप V3 सहायक स्ट्रीम को `assistant/message` / `assistant/attempt` में एम्बेड करता है और सिस्टम प्रॉम्प्ट को सरफ़ेस नोड 0 (`system/message`) के रूप में रखता है; प्लगइन केवल लाइव इवेंट स्ट्रीम पढ़ता है और कभी सत्र लॉग फ़ाइलें नहीं पढ़ता। 2026-09-09 को dsh-v0.1.5-alpha.1 tag के विरुद्ध सत्यापित (स्थानीय पूर्ण गेट श्रृंखला; प्रोफ़ाइल इंस्टॉल स्मोक मासिक compat वर्कफ़्लो कवर करता है)। |
+| Harness | DeepSeek Harness `dsh-v0.1.5-rc.1` (2026-09-09 को अनुकूलित): सत्र प्रारूप V3 सहायक स्ट्रीम को `assistant/message` / `assistant/attempt` में एम्बेड करता है और सिस्टम प्रॉम्प्ट को सरफ़ेस नोड 0 (`system/message`) के रूप में रखता है; प्लगइन केवल लाइव इवेंट स्ट्रीम पढ़ता है और कभी सत्र लॉग फ़ाइलें नहीं पढ़ता। 2026-09-10 को dsh-v0.1.5-rc.1 tag के विरुद्ध सत्यापित (स्थानीय पूर्ण गेट श्रृंखला; प्रोफ़ाइल इंस्टॉल स्मोक मासिक compat वर्कफ़्लो कवर करता है)। |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | बैकएंड | OpenTelemetry OTLP/HTTP (traces + metrics, JSON एन्कोडिंग) और Langfuse (LLM ऑब्ज़र्वेबिलिटी) — एक या दोनों |
 | मॉडल | मॉडल-स्वतंत्र: यह `session/event` स्ट्रीम निर्यात करता है; कोई मॉडल कॉल नहीं करता |
@@ -170,7 +170,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ## Known limitations
 
-- **npm 0.1.5-alpha.1** — प्लगइन `@deepseek-ai/dsh@0.1.5-alpha.1` के विरुद्ध विकसित और परीक्षित है (devDeps और CI इसी पर पिन); peer रेंज `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` प्रकाशित rc.1 लाइन को इंस्टॉल-योग्य रखती है, और मासिक compat वर्कफ़्लो नए बेसलाइन कवर करता है।
+- **npm 0.1.5-rc.1** — प्लगइन `@deepseek-ai/dsh@0.1.5-rc.1` के विरुद्ध विकसित और परीक्षित है (devDeps और CI इसी पर पिन); peer रेंज `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` प्रकाशित rc.1 लाइन को इंस्टॉल-योग्य रखती है, और मासिक compat वर्कफ़्लो नए बेसलाइन कवर करता है।
 - **मेट्रिक्स पुनर्प्रयास/spool पथ से बचती हैं** — OTLP मेट्रिक्स संचयी रूप से एकत्र होती हैं, इसलिए खोया flush अगले में स्वयं-सुधर जाता है (डिज़ाइन से, बग नहीं)।
 - **कोई सैंपलिंग नहीं** — हर सक्षम span परिवार निर्यात होता है; उच्च-मात्रा सत्रों के लिए `capture.*` स्विच और `batch.maxBufferRecords` समायोजित करें।
 
@@ -178,8 +178,8 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests पिन किए 0.1.5-alpha.1 devDeps के विरुद्ध (कोई tsconfig paths नहीं)
-pnpm run typecheck:ci  # tsc प्रकाशित 0.1.5-alpha.1 प्रकारों के विरुद्ध (बिना paths)
+pnpm run typecheck  # tsc: src + tests पिन किए 0.1.5-rc.1 devDeps के विरुद्ध (कोई tsconfig paths नहीं)
+pnpm run typecheck:ci  # tsc प्रकाशित 0.1.5-rc.1 प्रकारों के विरुद्ध (बिना paths)
 pnpm test           # vitest: 124 टेस्ट, 18 सुइट (वास्तविक Context/Session/storage seam)
 pnpm run test:coverage  # कवरेज द्वार (90/80/90/90)
 pnpm run build      # tsdown बंडल + tsc घोषणाएँ (lib/)
