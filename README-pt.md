@@ -26,7 +26,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-rc.1` (adaptado em 2026-09-09): o formato de sessão V3 embute o fluxo do assistente em `assistant/message` / `assistant/attempt` e representa o prompt de sistema como nó 0 da superfície (`system/message`); o plugin consome apenas o fluxo de eventos ao vivo e nunca lê arquivos de log de sessão. Verificado em 2026-09-10 contra a tag dsh-v0.1.5-rc.1 (cadeia completa de portas local; o workflow compat mensal cobre o smoke de instalação de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.5-rc.2` (adaptado em 2026-09-09): o formato de sessão V3 embute o fluxo do assistente em `assistant/message` / `assistant/attempt` e representa o prompt de sistema como nó 0 da superfície (`system/message`); o plugin consome apenas o fluxo de eventos ao vivo e nunca lê arquivos de log de sessão. Verificado em 2026-09-11 contra a tag dsh-v0.1.5-rc.2 (cadeia completa de portas local; o workflow compat mensal cobre o smoke de instalação de perfil). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificação JSON) e Langfuse (observabilidade de LLM) — um ou ambos |
 | Modelo | Independente de modelo: exporta o fluxo `session/event`; não faz chamadas a modelos |
@@ -170,7 +170,7 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 
 ## Known limitations
 
-- **npm 0.1.5-rc.1** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.5-rc.1` (devDeps e CI fixados); o intervalo de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` mantém a linha rc.1 publicada instalável, e o workflow compat mensal cobre baselines mais novos.
+- **npm 0.1.5-rc.2** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.5-rc.2` (devDeps e CI fixados); o intervalo de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0` mantém a linha rc.1 publicada instalável, e o workflow compat mensal cobre baselines mais novos.
 - **Métricas evitam o caminho de tentativa/spool** — as métricas OTLP são agregadas cumulativamente, então um flush perdido se autocura no seguinte (por design, não é um bug).
 - **Sem amostragem** — toda família de spans habilitada é exportada; ajuste os interruptores `capture.*` e `batch.maxBufferRecords` para sessões de alto volume.
 
@@ -178,8 +178,8 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests contra os devDeps fixados 0.1.5-rc.1 (sem tsconfig paths)
-pnpm run typecheck:ci  # tsc contra os tipos publicados 0.1.5-rc.1 (sem paths)
+pnpm run typecheck  # tsc: src + tests contra os devDeps fixados 0.1.5-rc.2 (sem tsconfig paths)
+pnpm run typecheck:ci  # tsc contra os tipos publicados 0.1.5-rc.2 (sem paths)
 pnpm test           # vitest: 124 testes, 18 suítes (Context/Session/storage seam reais)
 pnpm run test:coverage  # porta de cobertura (90/80/90/90)
 pnpm run build      # bundle tsdown + declarações tsc (lib/)
