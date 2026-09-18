@@ -49,6 +49,17 @@ const SET_ENABLED_ARGS_CODEC = z.object({
   enabled: z.boolean(),
 })
 
+/**
+ * Strict wire codec carrying BOTH published and checkout faces: the `schema`
+ * field feeds the npm-published 0.1.5-rc.2 line, `create` feeds the checkout
+ * 0.1.6-alpha.1+ line (the loader materializes the schema lazily on first
+ * use). Built through a variable, so neither typecheck ruler flags the other
+ * face's field as excess.
+ */
+function strictWire<T>(typeSymbol: string, schema: T) {
+  return Object.freeze({ ...{ mode: 'strict' as const, typeSymbol, schema }, create: () => schema })
+}
+
 /** The `observe/status` invocation descriptor: the read-only status snapshot. */
 export const OBSERVE_STATUS_DESCRIPTOR = Object.freeze({
   id: 'dsh-observe#observe/status',
@@ -57,11 +68,7 @@ export const OBSERVE_STATUS_DESCRIPTOR = Object.freeze({
   method: 'status',
   invocation: Object.freeze({ kind: 'direct' }),
   parameters: Object.freeze([]),
-  result: Object.freeze({
-    mode: 'strict',
-    typeSymbol: 'dsh-observe/types#ObserveStatus',
-    schema: OBSERVE_STATUS_SCHEMA,
-  }),
+  result: strictWire('dsh-observe/types#ObserveStatus', OBSERVE_STATUS_SCHEMA),
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
@@ -76,17 +83,9 @@ export const OBSERVE_SET_ENABLED_DESCRIPTOR = Object.freeze({
     name: 'request',
     wire: 'request',
     source: 'json',
-    codec: Object.freeze({
-      mode: 'strict',
-      typeSymbol: 'dsh-observe/types#ObserveSetEnabledArgs',
-      schema: SET_ENABLED_ARGS_CODEC,
-    }),
+    codec: strictWire('dsh-observe/types#ObserveSetEnabledArgs', SET_ENABLED_ARGS_CODEC),
   } satisfies InvocationDescriptor['parameters'][number])]),
-  result: Object.freeze({
-    mode: 'strict',
-    typeSymbol: 'dsh-observe/types#ObserveSetEnabledResult',
-    schema: OBSERVE_SET_ENABLED_RESULT_SCHEMA,
-  }),
+  result: strictWire('dsh-observe/types#ObserveSetEnabledResult', OBSERVE_SET_ENABLED_RESULT_SCHEMA),
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
