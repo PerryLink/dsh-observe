@@ -59,8 +59,30 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
   const isEnabled = () => enabled
 
   const otlpSink = resolved.otlp === undefined ? undefined : new OtlpSink(resolved.otlp, logger)
+
+  /**
+   * Structural face of the optional (experimental) `inspector` service. Read
+   * structurally on purpose: the service is experimental and must never be
+   * injected, and it is an extra outlet beside the OTLP sink, never the only
+   * one.
+   */
+  interface InspectorLike {
+    publish(topic: string, payload: unknown, monotonicMs?: number): void
+  }
+  const inspector = ctx.get('inspector') as InspectorLike | undefined
+  const publishInspector = (topic: string, payload: unknown): void => {
+    if (inspector === undefined || typeof inspector.publish !== 'function') return
+    try {
+      inspector.publish(topic, payload)
+    } catch {
+      // Diagnostics must never break the export hot path.
+    }
+  }
+
   const recordMetric = (metric: MetricRecord): void => {
-    if (isEnabled()) otlpSink?.recordMetric(metric)
+    if (!isEnabled()) return
+    otlpSink?.recordMetric(metric)
+    publishInspector('observe.metric', metric)
   }
 
   // The durable offline buffer. Opening the domain can fail — storageDomain is
