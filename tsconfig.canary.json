@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.test.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {}
+  },
+  "include": ["scripts/ruler-canary.ts"]
+}

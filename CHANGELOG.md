@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.13] - 2026-09-18
+
+### Added
+
+- `dsh.manifestVersion: 1` and the canonical three-clause `engines.dsh` range, matching the 0.1.6 family contract.
+- An optional diagnostics outlet: when the experimental `inspector` service is composed, every recorded metric is also published (`observe.metric`). The service is read structurally and never injected, a missing service is a silent no-op, and a throwing service cannot break the export path — the OTLP sink stays the primary outlet.
+- A ruler-liveness canary (`tsconfig.canary.json` + `scripts/ruler-canary.ts` + `pnpm run check:ruler-live`): the canary references constructs that exist only on the older alpha.1/rc.2 type line, so a green compile means the typecheck ruler is measuring a stale face. CI now runs both rulers plus the canary.
+
+### Fixed
+
+- Strict Typert wire codecs now carry both faces — the published `schema` field and the checkout `create()` factory. The 0.1.6-alpha.2 loader requires `create()`, so the build failed on that line with `Property 'create' is missing`; the codec is built through a variable so neither typecheck ruler flags the other face's field as excess.
+- Mounting no longer dies when the durable offline buffer cannot open. `storageDomain` is single-open per name, so a hot reload racing the previous instance's close made the second `open` reject and the whole exporter failed to mount; the open is now wrapped, the degradation warns once, and the exporter keeps delivering through the in-memory queue.
+- The `session/event`, `session/flush`, and `session/disposed` listeners are registered inside the teardown effect (with the timers, the final pipeline flush, and the domain close), so a mid-apply disposal can no longer throw `INACTIVE_EFFECT` or leave the collector writing after unmount.
+- Prompt capture reads the projected model-visible history (`Session.deriveMessages()`) instead of the deprecated synchronous event snapshot; hosts without that accessor contribute the logged header only, which is what their pre-0.1.5 logs carried anyway.
+
+### Changed
+
+- The dev/test `@deepseek-ai/dsh-*` dependencies move to the `0.1.6-alpha.2` line so the primary typecheck ruler measures the new type face; `typecheck:ci` keeps measuring the published line.
+
 ## [0.2.12] - 2026-09-12
 
 ### Changed

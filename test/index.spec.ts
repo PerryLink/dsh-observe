@@ -120,3 +120,102 @@ describe('apply with an otlp backend', () => {
     }
   })
 })
+
+describe('the optional inspector outlet', () => {
+  it('publishes metrics when the experimental inspector service is composed', async () => {
+    const base = await mountBase('index-inspector')
+    try {
+      const published: Array<{ topic: string; payload: unknown }> = []
+      base.ctx.provide('inspector', {
+        publish: (topic: string, payload: unknown) => { published.push({ topic, payload }) },
+      } as never)
+      // A failing sink is the shortest path to a real operational metric
+      // (`observe.export_failures`), so the outlet is exercised end to end.
+      const fetchMock = vi.fn(async () => new Response('boom', { status: 500 }))
+      vi.stubGlobal('fetch', fetchMock)
+      const fiber = await mountPlugin(base, {
+        enabled: true,
+        otlp: { endpoint: 'http://collector:4318' },
+        batch: { flushIntervalMs: 60_000, bufferRetryIntervalMs: 60_000 },
+      })
+      base.session.append('turn/start', { turn: 3 })
+      base.session.append('turn/end', { turn: 3, reason: { kind: 'completed' } })
+      base.ctx.emit('session/flush', base.session)
+
+      await vi.waitFor(() => expect(published.length).toBeGreaterThan(0))
+      expect(published.every(entry => entry.topic === 'observe.metric')).toBe(true)
+      const first = published[0]?.payload as { name?: string } | undefined
+      expect(first?.name).toBe('observe.export_failures')
+      await fiber.dispose()
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  it('keeps exporting when the inspector service throws', async () => {
+    const base = await mountBase('index-inspector-throwing')
+    try {
+      base.ctx.provide('inspector', {
+        publish: () => { throw new Error('inspector worker gone') },
+      } as never)
+      const fetchMock = installFetch()
+      const fiber = await mountPlugin(base, {
+        enabled: true,
+        otlp: { endpoint: 'http://collector:4318' },
+        batch: { flushIntervalMs: 60_000, bufferRetryIntervalMs: 60_000 },
+      })
+      base.session.append('turn/start', { turn: 4 })
+      base.session.append('turn/end', { turn: 4, reason: { kind: 'completed' } })
+      base.ctx.emit('session/flush', base.session)
+      await vi.waitFor(() => expect(fetchMock.calls.length).toBeGreaterThan(0))
+      await fiber.dispose()
+    } finally {
+      await unmountBase(base)
+    }
+  })
+})
+
+describe('apply with an unavailable durable buffer', () => {
+  it('still mounts, warns once, and keeps exporting through memory (A02)', async () => {
+    // The old shape awaited the domain open bare, so a rejection failed the
+    // whole mount. The production cause is storageDomain's single-open-per-name
+    // rule: a hot reload that races the previous instance's close leaves the
+    // name reserved and the second open rejects. Reproduce it exactly by
+    // holding the domain open across the plugin mount.
+    const base = await mountBase('index-degraded')
+    try {
+      const warnings: string[] = []
+      base.ctx.logger.exporter({
+        // The exporter needs an explicit level for the plugin's logger name;
+        // the service's own ring buffer drops warnings at its default level.
+        levels: { observe: 3 },
+        export: (message) => {
+          warnings.push(`${message.type}:${message.args.map(String).join(' ')}`)
+        },
+      })
+      const { observeDomainSpec } = await import('../src/spool.ts')
+      const held = await base.ctx.storageDomain.open(observeDomainSpec)
+      const fetchMock = installFetch()
+
+      const fiber = await mountPlugin(base, {
+        enabled: true,
+        otlp: { endpoint: 'http://collector:4318' },
+        batch: { flushIntervalMs: 60_000, bufferRetryIntervalMs: 60_000 },
+      })
+
+      const degradation = warnings.filter(line => line.includes('offline buffer unavailable'))
+      expect(degradation, `warnings: ${JSON.stringify(warnings)}`).toHaveLength(1)
+      expect(degradation[0]).toMatch(/already open/u)
+
+      base.session.append('turn/start', { turn: 7 })
+      base.session.append('turn/end', { turn: 7, reason: { kind: 'completed' } })
+      base.ctx.emit('session/flush', base.session)
+      await vi.waitFor(() => expect(fetchMock.calls.length).toBeGreaterThan(0))
+
+      await fiber.dispose()
+      await held.close()
+    } finally {
+      await unmountBase(base)
+    }
+  })
+})

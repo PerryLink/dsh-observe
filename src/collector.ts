@@ -15,7 +15,6 @@
 import type { TokenUsage } from '@deepseek-ai/dsh-llm'
 import type { StreamChunk } from '@deepseek-ai/dsh-llm/types'
 import type { EpochHeader, RequestContext, Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import { deriveEventMessage } from '@deepseek-ai/dsh-session'
 import type { ResolvedConfig } from './config.ts'
 import type { JsonScalar, MetricRecord, SpanRecord, TokenCounts } from './model.ts'
 import { findPrice, costUsd } from './pricing.ts'
@@ -629,16 +628,17 @@ export class Collector {
     const parts: string[] = []
     const legacySystem = (header as unknown as { system?: string } | undefined)?.system
     if (legacySystem !== undefined) parts.push(legacySystem)
-    // alpha.5 renamed the Session.events getter to snapshotEvents(); older hosts
-    // (the >=0.1.0-rc.8 peer floor) still expose .events, so detect at runtime.
-    const events = typeof session.snapshotEvents === 'function'
-      ? session.snapshotEvents()
-      : (session as unknown as { events: readonly SessionEvent[] }).events
-    for (const seq of session.surface.nodes) {
-      const event = events[seq]
-      if (event === undefined) continue
-      const message = deriveEventMessage(event)
-      if (message !== null) parts.push(projectMessage(message))
+    // The projected model-visible history, not the raw log: `snapshotEvents()`
+    // is deprecated on the 0.1.6 line (new calls are prohibited), and the
+    // collector only ever needed the messages those surface nodes derive —
+    // node 0 is the rendered system prompt. Hosts old enough to lack
+    // `deriveMessages` contribute the logged header only, which is what their
+    // pre-0.1.5 logs carried anyway.
+    const derived = typeof session.deriveMessages === 'function'
+      ? session.deriveMessages()
+      : undefined
+    if (derived !== undefined) {
+      for (const message of derived) parts.push(projectMessage(message))
     }
     return sanitizeText(parts.join('\n'), this.config.sanitize.truncatePromptChars, this.config.sanitize)
   }

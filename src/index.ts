@@ -15,10 +15,11 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import type { Domain } from '@deepseek-ai/dsh-storage-domain'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import { Config, resolveConfig } from './config.ts'
 import type { ExportRecord, MetricRecord, SpanRecord } from './model.ts'
-import { observeDomainSpec, openSpool } from './spool.ts'
+import { observeDomainSpec, openSpool, DroppingSpool, type ObserveDomainSpec, type SpoolSurface } from './spool.ts'
 import { OtlpSink, LangfuseSink } from './sinks.ts'
 import { Pipeline } from './pipeline.ts'
 import { Collector } from './collector.ts'
@@ -58,25 +59,68 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
   const isEnabled = () => enabled
 
   const otlpSink = resolved.otlp === undefined ? undefined : new OtlpSink(resolved.otlp, logger)
-  const recordMetric = (metric: MetricRecord): void => {
-    if (isEnabled()) otlpSink?.recordMetric(metric)
+
+  /**
+   * Structural face of the optional (experimental) `inspector` service. Read
+   * structurally on purpose: the service is experimental and must never be
+   * injected, and it is an extra outlet beside the OTLP sink, never the only
+   * one.
+   */
+  interface InspectorLike {
+    publish(topic: string, payload: unknown, monotonicMs?: number): void
+  }
+  const inspector = ctx.get('inspector') as InspectorLike | undefined
+  const publishInspector = (topic: string, payload: unknown): void => {
+    if (inspector === undefined || typeof inspector.publish !== 'function') return
+    try {
+      inspector.publish(topic, payload)
+    } catch {
+      // Diagnostics must never break the export hot path.
+    }
   }
 
-  const domain = await ctx.storageDomain.open(observeDomainSpec)
-  const spool = openSpool(
-    domain,
-    resolved.batch.maxBufferRecords,
-    count => recordMetric({
-      name: 'observe.dropped',
-      kind: 'counter',
-      unit: 'records',
-      value: count,
-      attributes: { reason: 'buffer_overflow' },
-    }),
-    count => {
-      logger.warn(`spool: ${count} stored record(s) failed validation and were dropped`)
-    },
-  )
+  const recordMetric = (metric: MetricRecord): void => {
+    if (!isEnabled()) return
+    otlpSink?.recordMetric(metric)
+    publishInspector('observe.metric', metric)
+  }
+
+  // The durable offline buffer. Opening the domain can fail — storageDomain is
+  // single-open per name, so a hot reload that races the previous instance's
+  // close fails the second open — and failing the whole mount over a
+  // best-effort buffer would take the exporter down with it. A failed open
+  // degrades to a dropping spool with one warning; a disposal that lands while
+  // the open is in flight closes the freshly opened handle immediately, or the
+  // single-open reservation leaks into the next mount (A02).
+  let domain: Domain<ObserveDomainSpec> | undefined
+  let spool: SpoolSurface = new DroppingSpool()
+  try {
+    const opened = await ctx.storageDomain.open(observeDomainSpec)
+    if (ctx.fiber.uid === null) {
+      await opened.close()
+      return
+    }
+    domain = opened
+    spool = openSpool(
+      opened,
+      resolved.batch.maxBufferRecords,
+      count => recordMetric({
+        name: 'observe.dropped',
+        kind: 'counter',
+        unit: 'records',
+        value: count,
+        attributes: { reason: 'buffer_overflow' },
+      }),
+      count => {
+        logger.warn(`spool: ${count} stored record(s) failed validation and were dropped`)
+      },
+    )
+  } catch (error) {
+    logger.warn(
+      `offline buffer unavailable (${error instanceof Error ? error.message : String(error)}); `
+      + 'continuing without the durable spool — spilled records are dropped instead of persisted',
+    )
+  }
 
   const pipelines: Pipeline[] = []
   if (otlpSink !== undefined) {
@@ -117,9 +161,13 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     logger,
   )
 
-  // One effect owns every timer and the teardown order: stop the timers,
-  // final-flush the pipelines (spilling failures to the durable buffer),
-  // then close the domain.
+  // One effect owns every timer, the event subscriptions, and the teardown
+  // order: stop the timers and unsubscribe first (so no event reaches the
+  // collector after disposal), final-flush the pipelines (spilling failures
+  // to the durable buffer), then close the domain. Keeping the listeners
+  // inside the effect is what makes a mid-apply disposal safe: a listener
+  // registered outside it would throw INACTIVE_EFFECT and take the remaining
+  // registrations with it (A02).
   ctx.effect(() => {
     const timers: ReturnType<typeof setInterval>[] = [
       setInterval(() => {
@@ -132,35 +180,40 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
         ? []
         : [setInterval(() => { void otlpSink.flushMetrics() }, resolved.batch.flushIntervalMs)]),
     ]
+
+    // Consumer — consumes the harness session/event stream (and the optional
+    // tokenMeter) and feeds the export pipeline.
+    const offEvent = ctx.on('session/event', (session: Session, event: SessionEvent) => {
+      try {
+        collector.handleEvent(session, event)
+      } catch (error) {
+        logger.warn(`session "${session.id}": event handling failed: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    })
+
+    // Best-effort kick: the session-flush durability checkpoint must not wait
+    // on a remote observability backend, so exports run in the background.
+    const offFlush = ctx.on('session/flush', () => {
+      for (const pipeline of pipelines) pipeline.kick()
+    })
+
+    const offDisposed = ctx.on('session/disposed', (session: Session) => {
+      try {
+        collector.handleSessionDisposed(session)
+      } catch (error) {
+        logger.warn(`session "${session.id}": disposal handling failed: ${error instanceof Error ? error.message : String(error)}`)
+      }
+      for (const pipeline of pipelines) pipeline.kick()
+    })
+
     return async () => {
       for (const timer of timers) clearInterval(timer)
+      offEvent()
+      offFlush()
+      offDisposed()
       await Promise.all(pipelines.map(pipeline => pipeline.dispose()))
-      await domain.close()
+      await domain?.close()
     }
-  })
-
-  // Consumer — consumes the harness session/event stream (and the optional tokenMeter) and feeds the export pipeline.
-  ctx.on('session/event', (session: Session, event: SessionEvent) => {
-    try {
-      collector.handleEvent(session, event)
-    } catch (error) {
-      logger.warn(`session "${session.id}": event handling failed: ${error instanceof Error ? error.message : String(error)}`)
-    }
-  })
-
-  // Best-effort kick: the session-flush durability checkpoint must not wait
-  // on a remote observability backend, so exports run in the background.
-  ctx.on('session/flush', () => {
-    for (const pipeline of pipelines) pipeline.kick()
-  })
-
-  ctx.on('session/disposed', (session: Session) => {
-    try {
-      collector.handleSessionDisposed(session)
-    } catch (error) {
-      logger.warn(`session "${session.id}": disposal handling failed: ${error instanceof Error ? error.message : String(error)}`)
-    }
-    for (const pipeline of pipelines) pipeline.kick()
   })
 
   if (resolved.remote) {

@@ -56,10 +56,22 @@ export interface SpoolCounts {
 }
 
 /**
+ * The offline-buffer surface the delivery pipeline depends on. Declared
+ * structurally so a mount without durable storage can substitute
+ * {@link DroppingSpool} instead of pretending to hold the real spool.
+ */
+export interface SpoolSurface {
+  push(backend: BackendName, records: ExportRecord[]): Promise<void>
+  peek(backend: BackendName, maxRecords: number): { batches: SpoolBatch[]; records: ExportRecord[] }
+  remove(batches: readonly SpoolBatch[]): Promise<void>
+  counts(): Record<BackendName, SpoolCounts>
+}
+
+/**
  * The offline buffer over one storage-domain table. The domain itself is
  * opened and closed by the runtime; the spool only owns the table handle.
  */
-export class Spool {
+export class Spool implements SpoolSurface {
   private nextSeq = 0
   private bufferedRecords = 0
 
@@ -193,4 +205,34 @@ export function openSpool(
   onInvalid: (count: number) => void,
 ): Spool {
   return new Spool(domain.table('spool'), maxBufferRecords, onDropped, onInvalid)
+}
+
+/**
+ * The offline buffer's degraded stand-in, used when the storage domain could
+ * not be opened at mount (storageDomain is single-open per name, so a hot
+ * reload racing the previous instance's close fails the second open).
+ * Nothing is persisted and drains are no-ops; the runtime reports the
+ * degradation once at mount and keeps exporting in memory.
+ */
+export class DroppingSpool implements SpoolSurface {
+  /** Records that would have been spilled into the durable buffer. */
+  dropped = 0
+
+  /** Count the records the durable buffer would have held. */
+  async push(_backend: BackendName, records: ExportRecord[]): Promise<void> {
+    this.dropped += records.length
+  }
+
+  /** Nothing is durable, so a drain always finds an empty buffer. */
+  peek(): { batches: SpoolBatch[]; records: ExportRecord[] } {
+    return { batches: [], records: [] }
+  }
+
+  /** No stored batches exist to delete. */
+  async remove(): Promise<void> {}
+
+  /** Occupancy of a buffer that holds nothing. */
+  counts(): Record<BackendName, SpoolCounts> {
+    return { otlp: { batches: 0, records: 0 }, langfuse: { batches: 0, records: 0 } }
+  }
 }
