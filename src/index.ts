@@ -15,10 +15,11 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import type { Domain } from '@deepseek-ai/dsh-storage-domain'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import { Config, resolveConfig } from './config.ts'
 import type { ExportRecord, MetricRecord, SpanRecord } from './model.ts'
-import { observeDomainSpec, openSpool } from './spool.ts'
+import { observeDomainSpec, openSpool, DroppingSpool, type ObserveDomainSpec, type SpoolSurface } from './spool.ts'
 import { OtlpSink, LangfuseSink } from './sinks.ts'
 import { Pipeline } from './pipeline.ts'
 import { Collector } from './collector.ts'
@@ -62,21 +63,42 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     if (isEnabled()) otlpSink?.recordMetric(metric)
   }
 
-  const domain = await ctx.storageDomain.open(observeDomainSpec)
-  const spool = openSpool(
-    domain,
-    resolved.batch.maxBufferRecords,
-    count => recordMetric({
-      name: 'observe.dropped',
-      kind: 'counter',
-      unit: 'records',
-      value: count,
-      attributes: { reason: 'buffer_overflow' },
-    }),
-    count => {
-      logger.warn(`spool: ${count} stored record(s) failed validation and were dropped`)
-    },
-  )
+  // The durable offline buffer. Opening the domain can fail — storageDomain is
+  // single-open per name, so a hot reload that races the previous instance's
+  // close fails the second open — and failing the whole mount over a
+  // best-effort buffer would take the exporter down with it. A failed open
+  // degrades to a dropping spool with one warning; a disposal that lands while
+  // the open is in flight closes the freshly opened handle immediately, or the
+  // single-open reservation leaks into the next mount (A02).
+  let domain: Domain<ObserveDomainSpec> | undefined
+  let spool: SpoolSurface = new DroppingSpool()
+  try {
+    const opened = await ctx.storageDomain.open(observeDomainSpec)
+    if (ctx.fiber.uid === null) {
+      await opened.close()
+      return
+    }
+    domain = opened
+    spool = openSpool(
+      opened,
+      resolved.batch.maxBufferRecords,
+      count => recordMetric({
+        name: 'observe.dropped',
+        kind: 'counter',
+        unit: 'records',
+        value: count,
+        attributes: { reason: 'buffer_overflow' },
+      }),
+      count => {
+        logger.warn(`spool: ${count} stored record(s) failed validation and were dropped`)
+      },
+    )
+  } catch (error) {
+    logger.warn(
+      `offline buffer unavailable (${error instanceof Error ? error.message : String(error)}); `
+      + 'continuing without the durable spool — spilled records are dropped instead of persisted',
+    )
+  }
 
   const pipelines: Pipeline[] = []
   if (otlpSink !== undefined) {
@@ -135,7 +157,7 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     return async () => {
       for (const timer of timers) clearInterval(timer)
       await Promise.all(pipelines.map(pipeline => pipeline.dispose()))
-      await domain.close()
+      await domain?.close()
     }
   })
 

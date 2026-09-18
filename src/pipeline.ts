@@ -10,13 +10,13 @@ import type { ResolvedBatch, ResolvedRetry } from './config.ts'
 import type { BackendName, ExportRecord, MetricRecord } from './model.ts'
 import { backoffDelayMs } from './backoff.ts'
 import type { ObserveLogger, SpanSink } from './sinks.ts'
-import type { Spool } from './spool.ts'
+import type { SpoolSurface } from './spool.ts'
 
 /** Everything one pipeline needs. */
 export interface PipelineOptions {
   name: BackendName
   sink: SpanSink
-  spool: Spool
+  spool: SpoolSurface
   batch: ResolvedBatch
   retry: ResolvedRetry
   logger: ObserveLogger

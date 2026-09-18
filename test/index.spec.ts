@@ -120,3 +120,48 @@ describe('apply with an otlp backend', () => {
     }
   })
 })
+
+describe('apply with an unavailable durable buffer', () => {
+  it('still mounts, warns once, and keeps exporting through memory (A02)', async () => {
+    // The old shape awaited the domain open bare, so a rejection failed the
+    // whole mount. The production cause is storageDomain's single-open-per-name
+    // rule: a hot reload that races the previous instance's close leaves the
+    // name reserved and the second open rejects. Reproduce it exactly by
+    // holding the domain open across the plugin mount.
+    const base = await mountBase('index-degraded')
+    try {
+      const warnings: string[] = []
+      base.ctx.logger.exporter({
+        // The exporter needs an explicit level for the plugin's logger name;
+        // the service's own ring buffer drops warnings at its default level.
+        levels: { observe: 3 },
+        export: (message) => {
+          warnings.push(`${message.type}:${message.args.map(String).join(' ')}`)
+        },
+      })
+      const { observeDomainSpec } = await import('../src/spool.ts')
+      const held = await base.ctx.storageDomain.open(observeDomainSpec)
+      const fetchMock = installFetch()
+
+      const fiber = await mountPlugin(base, {
+        enabled: true,
+        otlp: { endpoint: 'http://collector:4318' },
+        batch: { flushIntervalMs: 60_000, bufferRetryIntervalMs: 60_000 },
+      })
+
+      const degradation = warnings.filter(line => line.includes('offline buffer unavailable'))
+      expect(degradation, `warnings: ${JSON.stringify(warnings)}`).toHaveLength(1)
+      expect(degradation[0]).toMatch(/already open/u)
+
+      base.session.append('turn/start', { turn: 7 })
+      base.session.append('turn/end', { turn: 7, reason: { kind: 'completed' } })
+      base.ctx.emit('session/flush', base.session)
+      await vi.waitFor(() => expect(fetchMock.calls.length).toBeGreaterThan(0))
+
+      await fiber.dispose()
+      await held.close()
+    } finally {
+      await unmountBase(base)
+    }
+  })
+})

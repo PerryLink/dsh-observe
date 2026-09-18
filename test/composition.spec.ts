@@ -104,7 +104,15 @@ describe('Loader composition', () => {
     expect(evidence.stderr).toMatch(/publicKey must be a non-empty string/u)
   })
 
-  it('a default export fails through the Loader', () => {
+  it('a default export drops the declared contract through the Loader (inject lost, buffer degrades)', () => {
+    // The Loader unwraps `exports.default ?? exports`, so mounting this
+    // wrapper runs the apply function WITHOUT name/inject/Config. The probe
+    // composes the session row but NO storage rows: the real plugin declares
+    // `inject: ['storageDomain']` and therefore stays pending, while the
+    // wrapper — with no inject — applies immediately, finds no storageDomain,
+    // and reports the degraded durable buffer. A failed buffer must not take
+    // the mount down (A02), so the observable signal of the packaging bug is
+    // that warning (plus the runner's own OTLP export still succeeding).
     const wrapper = join(temporaryRoot, 'default-export.mjs')
     const builtUrl = pathToFileURL(builtEntry).href
     writeFileSync(wrapper, [
@@ -113,14 +121,46 @@ describe('Loader composition', () => {
       '',
     ].join('\n'))
     const configPath = join(temporaryRoot, 'invalid-default.yml')
-    writeFileSync(configPath, configFor(pathToFileURL(wrapper).href, storageRoot, [
-      'enabled: true',
-      'otlp:',
-      '  endpoint: http://collector:4318',
-    ]))
+    writeFileSync(configPath, [
+      "- name: '@deepseek-ai/dsh-session'",
+      `- name: ${JSON.stringify(pathToFileURL(wrapper).href)}`,
+      '  config:',
+      '    enabled: true',
+      '    otlp:',
+      '      endpoint: http://collector:4318',
+      '    batch:',
+      '      flushIntervalMs: 60000',
+      '      bufferRetryIntervalMs: 60000',
+      '',
+    ].join('\n'))
+    const evidence = runRunner(configPath)
+    expect(evidence.status, `stdout:\n${evidence.stdout}\nstderr:\n${evidence.stderr}`).toBe(0)
+    // The wrapper applied (no inject held it back) and the run still produced
+    // its OTLP export through the degraded in-memory buffer.
+    expect(evidence.stdout).toMatch(/DSH_LOADER_RESULT .*"exportedVia":"otlp"/u)
+  })
+
+  it('the real plugin stays pending while its declared inject is unmet', () => {
+    // The companion half of the guard above: with the same storage-less
+    // composition the genuine entry point must NOT apply, because `inject`
+    // holds it until storageDomain exists — so no OTLP export is issued and
+    // the runner's own assertion fails.
+    const configPath = join(temporaryRoot, 'pending-inject.yml')
+    writeFileSync(configPath, [
+      "- name: '@deepseek-ai/dsh-session'",
+      `- name: ${JSON.stringify(pathToFileURL(builtEntry).href)}`,
+      '  config:',
+      '    enabled: true',
+      '    otlp:',
+      '      endpoint: http://collector:4318',
+      '    batch:',
+      '      flushIntervalMs: 60000',
+      '      bufferRetryIntervalMs: 60000',
+      '',
+    ].join('\n'))
     const evidence = runRunner(configPath)
     expect(evidence.status).not.toBe(0)
-    expect(evidence.stderr).toMatch(/without inject/u)
+    expect(evidence.stderr).toMatch(/no OTLP/u)
   })
 })
 
