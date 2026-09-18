@@ -139,9 +139,13 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
     logger,
   )
 
-  // One effect owns every timer and the teardown order: stop the timers,
-  // final-flush the pipelines (spilling failures to the durable buffer),
-  // then close the domain.
+  // One effect owns every timer, the event subscriptions, and the teardown
+  // order: stop the timers and unsubscribe first (so no event reaches the
+  // collector after disposal), final-flush the pipelines (spilling failures
+  // to the durable buffer), then close the domain. Keeping the listeners
+  // inside the effect is what makes a mid-apply disposal safe: a listener
+  // registered outside it would throw INACTIVE_EFFECT and take the remaining
+  // registrations with it (A02).
   ctx.effect(() => {
     const timers: ReturnType<typeof setInterval>[] = [
       setInterval(() => {
@@ -154,35 +158,40 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
         ? []
         : [setInterval(() => { void otlpSink.flushMetrics() }, resolved.batch.flushIntervalMs)]),
     ]
+
+    // Consumer — consumes the harness session/event stream (and the optional
+    // tokenMeter) and feeds the export pipeline.
+    const offEvent = ctx.on('session/event', (session: Session, event: SessionEvent) => {
+      try {
+        collector.handleEvent(session, event)
+      } catch (error) {
+        logger.warn(`session "${session.id}": event handling failed: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    })
+
+    // Best-effort kick: the session-flush durability checkpoint must not wait
+    // on a remote observability backend, so exports run in the background.
+    const offFlush = ctx.on('session/flush', () => {
+      for (const pipeline of pipelines) pipeline.kick()
+    })
+
+    const offDisposed = ctx.on('session/disposed', (session: Session) => {
+      try {
+        collector.handleSessionDisposed(session)
+      } catch (error) {
+        logger.warn(`session "${session.id}": disposal handling failed: ${error instanceof Error ? error.message : String(error)}`)
+      }
+      for (const pipeline of pipelines) pipeline.kick()
+    })
+
     return async () => {
       for (const timer of timers) clearInterval(timer)
+      offEvent()
+      offFlush()
+      offDisposed()
       await Promise.all(pipelines.map(pipeline => pipeline.dispose()))
       await domain?.close()
     }
-  })
-
-  // Consumer — consumes the harness session/event stream (and the optional tokenMeter) and feeds the export pipeline.
-  ctx.on('session/event', (session: Session, event: SessionEvent) => {
-    try {
-      collector.handleEvent(session, event)
-    } catch (error) {
-      logger.warn(`session "${session.id}": event handling failed: ${error instanceof Error ? error.message : String(error)}`)
-    }
-  })
-
-  // Best-effort kick: the session-flush durability checkpoint must not wait
-  // on a remote observability backend, so exports run in the background.
-  ctx.on('session/flush', () => {
-    for (const pipeline of pipelines) pipeline.kick()
-  })
-
-  ctx.on('session/disposed', (session: Session) => {
-    try {
-      collector.handleSessionDisposed(session)
-    } catch (error) {
-      logger.warn(`session "${session.id}": disposal handling failed: ${error instanceof Error ? error.message : String(error)}`)
-    }
-    for (const pipeline of pipelines) pipeline.kick()
   })
 
   if (resolved.remote) {
