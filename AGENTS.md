@@ -28,7 +28,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-observe`). Development follo
 
 ## Checks
 
-`pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run test:coverage && pnpm run build && pnpm run verify:self-contained && pnpm run check:lockfile && pnpm run verify:artifacts && pnpm run check:lockfile && node scripts/check-readme-sync.mjs && pnpm pack`
+`pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run test:coverage && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && node scripts/check-readme-sync.mjs && pnpm run check:lockfile && pnpm pack`
 
 - `typecheck` (`tsconfig.json` + `tsconfig.test.json`) and `typecheck:ci` (`tsconfig.ci.json`, `skipLibCheck: false` + `verbatimModuleSyntax`) both resolve `@deepseek-ai/*` through `node_modules` to the pinned `0.1.5-rc.2` devDeps — no tsconfig `paths` to a harness checkout is configured, so the two rulers check the same published types. The package ships against the composite peer range `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`, with `0.1.5-rc.2` as the development/CI baseline.
 - `test:coverage` gates at 90/80/90/90 (statements/branches/functions/lines), `src/index.ts` excluded.
