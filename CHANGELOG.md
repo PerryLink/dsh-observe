@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Tool results are projected in the session-format-V4 shape. V4 carries a tool result as a first-class `role: 'tool'` message (top-level `toolCallId` + `content` + optional `isError`), and `'tool-result'` is no longer a member of the host's `ContentBlockMap` — so `src/project.ts` failed to compile on the 0.1.7 line with `TS2678: Type '"tool-result"' is not comparable to type '"text" | "reasoning" | "image" | "file" | "tool-call" | "tool-addition" | "tool-removal"'`. The failure marker now comes from the MESSAGE (`projectToolMessage`); projecting `content` alone would silently report a failed tool as a successful one. Verified by mutation: reverting the tool-span call site to the content-only projection turns the new `collector.spec.ts` case red.
+- A pre-upgrade (V3) session log still projects its tool-result text through `isRetiredToolResultWrapper`, an explicitly READ-ONLY compatibility path. The retired wrapper never had a persisted `isError` flag (the V3 migration rejects it), so a V3 row now projects without an invented `[error]` marker rather than fabricating one. This plugin writes no messages and no content blocks, so there is no write-side migration; the host rejects the retired wrapper at physical-row admission (`assertV4ToolResultMessage`).
+- The `createSystemMessage` call in the collector suite drops its removed second argument: host 0.1.7 narrowed the signature to `(text)` with the source fixed to `{ kind: 'system-prompt' }`.
+
+### Changed
+
+- The dev/test `@deepseek-ai/dsh-*` dependencies move to the `0.1.7-alpha.1` line (= the verified host tag `dsh-v0.1.7-alpha.1`), together with `@deepseek-ai/cordis` `^4.0.3` and `@deepseek-ai/schemastery` `^3.18.3`; `pnpm-workspace.yaml` pins `@deepseek-ai/cordis` 4.0.3, `@deepseek-ai/cosmokit` 1.8.4 and `@deepseek-ai/schemastery` 3.18.3 (bare peer edges; `Volatile` needs cordis 4.0.3+), and carries self-referential `overrides` rows for every `@deepseek-ai/dsh-*` devDep pin so the host type graph resolves to exactly one copy.
+- The peer range and `engines.dsh` gain a fourth clause, `|| >=0.1.7-0 <0.2.0`. The previous three-clause range excluded the target host itself: semver's prerelease rule does not let `>=0.1.6-0` admit `0.1.7-alpha.1`, so a correctly-pinned 0.1.7 install was reported as unsatisfied.
+- `@deepseek-ai/cordis-plugin-loader` is held at **1.0.3** (an `overrides` row) even though cordis 4.0.3 declares `^1.0.4` as an optional peer. On 1.0.4 `Entry._init()` catches an import/apply failure and merely calls `ctx.logger.error(error)` before returning, and cordis's LoggerService writes to no exporter by default — so `Tree.await()` stops rethrowing, a row whose config fails to parse becomes a silent unmount, and the composition suite loses the failure reason it asserts. Measured 2026-09-22: on 1.0.4 both negative composition cases degraded to the runner's own generic "no OTLP /v1/traces export was issued"; forcing 1.0.3 restored all six with no source change.
+
 ## [0.2.14] - 2026-09-19
 
 ### Added
