@@ -1,13 +1,58 @@
 packages:
   - .
 
+# Repo-local: this package resolves its peer graph from a flat node_modules, so
+# the layout stays hoisted across the 0.1.7 repin.
 nodeLinker: hoisted
 onlyBuiltDependencies:
   - esbuild
-# The 0.1.1-rc.2 @deepseek-ai family was published inside the registry's
-# minimum-release-age window; exclude the whole scope so installs resolve.
-minimumReleaseAgeExclude:
-  - '@deepseek-ai/*'
 allowBuilds:
   esbuild: true
+
+# The dev/test pins ride the 0.1.7-alpha.1 line (= the verified host tag), and
+# the self-referential rows are load-bearing: pnpm matches a prerelease range
+# only against its own [major, minor, patch] tuple, so a transitive peer asking
+# for `^0.1.7-alpha.1` would otherwise resolve SEPARATELY from this package's own
+# exact `0.1.7-alpha.1` devDeps. That installs a second copy of the host type
+# graph, and this package's `ContentBlock`/`Message` then disagree with the
+# host's own declarations (surfacing as spurious `X incorrectly extends Y`).
+# Mirroring each devDep pin keeps exactly one copy of every host package.
+#
+# `cordis`, `cosmokit`, and `schemastery` are BARE peer edges (no direct devDep
+# here) so they take plain package-name rows rather than self-referential ones:
+# the 0.1.7 line needs `@deepseek-ai/cordis` 4.0.3 (`Volatile` is only exported
+# from 4.0.3+, re-exported from `@deepseek-ai/cosmokit` 1.8.4+, which cordis
+# 4.0.3 requires as `^1.8.4`) and schemastery 3.18.3 is the copy the alpha.1
+# host packages were built against. The nominal ranges (`^4.0.2` / `^3.18.2`)
+# do cover those versions, but a lockfile that already pinned the older patch
+# keeps resolving to it, so the floors are explicit.
+#
+overrides:
+  '@deepseek-ai/cordis': 4.0.3
+  '@deepseek-ai/cosmokit': 1.8.4
+  '@deepseek-ai/schemastery': 3.18.3
+  '@deepseek-ai/dsh-attachment@^0.1.7-alpha.1': 0.1.7-alpha.1
+  '@deepseek-ai/dsh-llm@^0.1.7-alpha.1': 0.1.7-alpha.1
+  '@deepseek-ai/dsh-session@^0.1.7-alpha.1': 0.1.7-alpha.1
+  '@deepseek-ai/dsh-storage@^0.1.7-alpha.1': 0.1.7-alpha.1
+  '@deepseek-ai/dsh-storage-domain@^0.1.7-alpha.1': 0.1.7-alpha.1
+  '@deepseek-ai/dsh-storage-json@^0.1.7-alpha.1': 0.1.7-alpha.1
+  '@deepseek-ai/dsh-typert-protocol@^0.1.7-alpha.1': 0.1.7-alpha.1
+
+# The pinned host family is published inside the registry's minimum-release-age
+# window by design (every batch pins the newest published line); this
+# scope-wide row is the primary mechanism, and the per-version rows below stay
+# as the auditable record of which lines this batch pinned.
+minimumReleaseAgeExclude:
+  - '@deepseek-ai/*'
+  - '@deepseek-ai/cordis@4.0.3'
+  - '@deepseek-ai/cosmokit@1.8.4'
+  - '@deepseek-ai/schemastery@3.18.3'
+
+# The exact alpha pins are published inside the 24h minimum-release-age window
+# by design; the exclusion list above is the primary mechanism, and this
+# zero-age override keeps fresh installs deterministic when pnpm's lockfile
+# policy re-checks.
+minimumReleaseAge: 0
+
 verifyDepsBeforeRun: false
