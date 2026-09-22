@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-09-22
+
 ### Fixed
 
 - Tool results are projected in the session-format-V4 shape. V4 carries a tool result as a first-class `role: 'tool'` message (top-level `toolCallId` + `content` + optional `isError`), and `'tool-result'` is no longer a member of the host's `ContentBlockMap` — so `src/project.ts` failed to compile on the 0.1.7 line with `TS2678: Type '"tool-result"' is not comparable to type '"text" | "reasoning" | "image" | "file" | "tool-call" | "tool-addition" | "tool-removal"'`. The failure marker now comes from the MESSAGE (`projectToolMessage`); projecting `content` alone would silently report a failed tool as a successful one. Verified by mutation: reverting the tool-span call site to the content-only projection turns the new `collector.spec.ts` case red.
