@@ -83,7 +83,10 @@ function happyPath(session: Session, handle: (event: SessionEvent) => void): voi
   feedSurface(session, handle, 'system/message', {
     turn: 1,
     step: 1,
-    message: createSystemMessage('You are helpful. token sk-abc12345678901234', 'test'),
+    // Host 0.1.7 narrowed `createSystemMessage` to a single argument: the
+    // source is fixed `{ kind: 'system-prompt' }` and no longer accepts a
+    // producer label.
+    message: createSystemMessage('You are helpful. token sk-abc12345678901234'),
   })
   feedSurface(session, handle, 'user/message', createUserMessage({
     content: [{ type: 'text', text: 'hello' }],
@@ -224,6 +227,40 @@ describe('collector happy path', () => {
       expect(c1?.tool?.retries).toBe(0)
       expect(c2?.tool?.attempt).toBe(2)
       expect(c2?.tool?.retries).toBe(1)
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  // V4 carries the tool outcome on the MESSAGE (`ToolResultMessage.isError`),
+  // not inside the content blocks. Projecting `content` alone is therefore
+  // indistinguishable from success, so this guards the one place the marker can
+  // still be recovered: the exporter must report a failed tool as failed.
+  it('marks the projected tool output when the tool-role message carries isError', async () => {
+    const base = await mountBase('collector-tool-error')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      feed(base.session, handle, 'turn/start', { turn: 1 })
+      feed(base.session, handle, 'step/start', { turn: 1, step: 1 })
+      feed(base.session, handle, 'tool/call', {
+        turn: 1, step: 1, callId: CallId('c9'), name: 'bash', arguments: '{"command":"ls"}',
+      })
+      feedSurface(base.session, handle, 'tool/result', {
+        turn: 1,
+        step: 1,
+        message: createToolResultMessage({
+          callId: CallId('c9'),
+          content: [{ type: 'text', text: 'command not found' }],
+          isError: true,
+        }),
+        error: { name: 'ToolError', code: 'NON_ZERO_EXIT' },
+      })
+      feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
+      feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
+
+      const tool = spans.find(span => span.kind === 'tool')
+      expect(tool?.status).toBe('error')
+      expect(tool?.tool?.output).toBe('command not found [error]')
     } finally {
       await unmountBase(base)
     }

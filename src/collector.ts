@@ -18,7 +18,7 @@ import type { EpochHeader, RequestContext, Session, SessionEvent } from '@deepse
 import type { ResolvedConfig } from './config.ts'
 import type { JsonScalar, MetricRecord, SpanRecord, TokenCounts } from './model.ts'
 import { findPrice, costUsd } from './pricing.ts'
-import { projectContent, projectMessage } from './project.ts'
+import { projectContent, projectMessage, projectToolMessage } from './project.ts'
 import { sanitizeJsonText, sanitizeText } from './sanitize.ts'
 import type { ObserveLogger } from './sinks.ts'
 
@@ -421,8 +421,11 @@ export class Collector {
       attributes['tool.error.code'] = this.attr(event.data.error.code)
     }
     const input = sanitizeJsonText(open.arguments, this.config.sanitize.truncateToolInputChars, this.config.sanitize)
+    // V4 carries the tool outcome on the MESSAGE (`isError`), so the projected
+    // output must go through `projectToolMessage`; projecting `content` alone
+    // would drop the `[error]` marker and report a failed tool as a success.
     const output = sanitizeText(
-      projectContent(event.data.message.content),
+      projectToolMessage(event.data.message),
       this.config.sanitize.truncateToolOutputChars,
       this.config.sanitize,
     )
