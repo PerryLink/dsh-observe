@@ -27,8 +27,21 @@ allowBuilds:
 # do cover those versions, but a lockfile that already pinned the older patch
 # keeps resolving to it, so the floors are explicit.
 #
+# `cordis-plugin-loader` is pinned DOWN to 1.0.3 on purpose, and this row is
+# load-bearing. cordis 4.0.3 declares loader `^1.0.4` as an OPTIONAL peer, so a
+# fresh resolve picks 1.0.4 — where `Entry._init()` catches an import/apply
+# failure and merely calls `this.ctx.logger.error(error)` before returning
+# (lib/index.js), and cordis's LoggerService writes to no exporter by default.
+# `Tree.await()` therefore stops rethrowing, a row whose config fails to parse
+# becomes a SILENT unmount, and this repo's composition suite loses the reason
+# it asserts (invalid config must fail loud with the plugin's own message).
+# 1.0.3 throws instead, so `Tree.await()` rethrows and the reason survives.
+# Measured 2026-09-22 on loader 1.0.4: both negative composition cases degraded
+# to the runner's own generic "no OTLP /v1/traces export was issued"; forcing
+# 1.0.3 turned all six composition tests green with no source change.
 overrides:
   '@deepseek-ai/cordis': 4.0.3
+  '@deepseek-ai/cordis-plugin-loader': 1.0.3
   '@deepseek-ai/cosmokit': 1.8.4
   '@deepseek-ai/schemastery': 3.18.3
   '@deepseek-ai/dsh-attachment@^0.1.7-alpha.1': 0.1.7-alpha.1
