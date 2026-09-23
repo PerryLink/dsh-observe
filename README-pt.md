@@ -29,7 +29,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.1` (adaptado em 2026-09-22): o formato de sessão V4 representa o resultado de uma ferramenta como uma mensagem de primeira classe `role: 'tool'` com `toolCallId` + `content` + `isError` opcional no nível superior — o bloco de conteúdo `tool-result` do V3 saiu do `ContentBlockMap` do host, e este plugin lê apenas a forma V4 (um log V3 anterior à atualização ainda é projetado por um caminho de compatibilidade somente leitura). Os demais traços do formato de sessão V3 permanecem: o fluxo do assistente é embutido em `assistant/message` / `assistant/attempt` e o prompt de sistema é o nó 0 da superfície (`system/message`); o plugin consome apenas o fluxo de eventos ao vivo e nunca lê arquivos de log de sessão. O intervalo de peers `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0` mantém cada linha publicada instalável (cadeia completa de portas local; o workflow compat cobre o smoke de instalação de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.2` (adaptado em 2026-09-22): o formato de sessão V4 representa o resultado de uma ferramenta como uma mensagem de primeira classe `role: 'tool'` com `toolCallId` + `content` + `isError` opcional no nível superior — o bloco de conteúdo `tool-result` do V3 saiu do `ContentBlockMap` do host, e este plugin lê apenas a forma V4 (um log V3 anterior à atualização ainda é projetado por um caminho de compatibilidade somente leitura). Os demais traços do formato de sessão V3 permanecem: o fluxo do assistente é embutido em `assistant/message` / `assistant/attempt` e o prompt de sistema é o nó 0 da superfície (`system/message`); o plugin consome apenas o fluxo de eventos ao vivo e nunca lê arquivos de log de sessão. O intervalo de peers `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0` mantém cada linha publicada instalável (cadeia completa de portas local; o workflow compat cobre o smoke de instalação de perfil). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificação JSON) e Langfuse (observabilidade de LLM) — um ou ambos |
 | Modelo | Independente de modelo: exporta o fluxo `session/event`; não faz chamadas a modelos |
@@ -173,7 +173,7 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 
 ## Known limitations
 
-- **npm 0.1.7-alpha.1** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.7-alpha.1` (devDeps e a régua primária do CI); o intervalo de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0` mantém cada linha publicada instalável, e a segunda régua (`typecheck:ci`) mais o workflow compat cobrem os baselines antigos.
+- **npm 0.1.7-alpha.2** — o plugin é desenvolvido e testado contra `@deepseek-ai/dsh@0.1.7-alpha.2` (devDeps e a régua primária do CI); o intervalo de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0` mantém cada linha publicada instalável, e a segunda régua (`typecheck:ci`) mais o workflow compat cobrem os baselines antigos.
 - **Eventos de auditoria não são persistidos** — os registros `observe/*` do próprio exportador são apenas de auditoria: na linha de host atual o portão de append da sessão admite eventos de superfície, então nenhum evento `observe/*` é gravado no log da sessão, e o plugin não o falsifica com um append sem marcação (isso tornaria as sessões ilegíveis). Use a saída de status do `/observe` e os backends OTLP/Langfuse como superfície de auditoria.
 - **Métricas evitam o caminho de tentativa/spool** — as métricas OTLP são agregadas cumulativamente, então um flush perdido se autocura no seguinte (por design, não é um bug).
 - **Sem amostragem** — toda família de spans habilitada é exportada; ajuste os interruptores `capture.*` e `batch.maxBufferRecords` para sessões de alto volume.
@@ -182,7 +182,7 @@ Este plugin **não registra ferramentas de modelo** — é um exportador em segu
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests contra os devDeps 0.1.7-alpha.1 (sem tsconfig paths)
+pnpm run typecheck  # tsc: src + tests contra os devDeps 0.1.7-alpha.2 (sem tsconfig paths)
 pnpm run typecheck:ci  # tsc contra a linha publicada (sem paths)
 pnpm run check:ruler-live  # canário: deve falhar ao compilar, provando que a régua segue viva
 pnpm test           # vitest: 126 testes, 18 suítes (Context/Session/storage seam reais)

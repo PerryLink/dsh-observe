@@ -29,7 +29,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.1` (adaptado el 2026-09-22): el formato de sesión V4 representa el resultado de una herramienta como un mensaje de primera clase `role: 'tool'` con `toolCallId` + `content` + `isError` opcional en el nivel superior — el bloque de contenido `tool-result` de V3 ya no está en el `ContentBlockMap` del host, y este plugin solo lee la forma V4 (un log V3 anterior a la actualización todavía se proyecta mediante una ruta de compatibilidad de solo lectura). Los demás rasgos del formato de sesión V3 se mantienen: el flujo del asistente se incorpora en `assistant/message` / `assistant/attempt` y el prompt de sistema es el nodo 0 de la superficie (`system/message`); el plugin consume solo el flujo de eventos en vivo y nunca lee archivos de log de sesión. El rango de peers `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0` mantiene instalable cada línea publicada (cadena completa de puertas local; el workflow compat cubre el smoke de instalación de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.2` (adaptado el 2026-09-22): el formato de sesión V4 representa el resultado de una herramienta como un mensaje de primera clase `role: 'tool'` con `toolCallId` + `content` + `isError` opcional en el nivel superior — el bloque de contenido `tool-result` de V3 ya no está en el `ContentBlockMap` del host, y este plugin solo lee la forma V4 (un log V3 anterior a la actualización todavía se proyecta mediante una ruta de compatibilidad de solo lectura). Los demás rasgos del formato de sesión V3 se mantienen: el flujo del asistente se incorpora en `assistant/message` / `assistant/attempt` y el prompt de sistema es el nodo 0 de la superficie (`system/message`); el plugin consume solo el flujo de eventos en vivo y nunca lee archivos de log de sesión. El rango de peers `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0` mantiene instalable cada línea publicada (cadena completa de puertas local; el workflow compat cubre el smoke de instalación de perfil). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, codificación JSON) y Langfuse (observabilidad de LLM) — uno o ambos |
 | Modelo | Independiente del modelo: exporta el flujo `session/event`; no realiza llamadas a modelos |
@@ -173,7 +173,7 @@ Este plugin **no registra herramientas de modelo** — es un exportador en segun
 
 ## Known limitations
 
-- **npm 0.1.7-alpha.1** — el plugin se desarrolla y prueba contra `@deepseek-ai/dsh@0.1.7-alpha.1` (devDeps y la regla primaria de CI); el rango de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0` mantiene instalable cada línea publicada, y la segunda regla (`typecheck:ci`) más el workflow compat cubren los baselines antiguos.
+- **npm 0.1.7-alpha.2** — el plugin se desarrolla y prueba contra `@deepseek-ai/dsh@0.1.7-alpha.2` (devDeps y la regla primaria de CI); el rango de peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0` mantiene instalable cada línea publicada, y la segunda regla (`typecheck:ci`) más el workflow compat cubren los baselines antiguos.
 - **Los eventos de auditoría no se persisten** — los registros `observe/*` del propio exportador son solo de auditoría: en la línea de host actual la puerta de append de sesión admite eventos de superficie, así que ningún evento `observe/*` se escribe en el log de sesión, y el plugin no lo falsifica con un append sin marcar (eso volvería ilegibles las sesiones). Usa la salida de estado de `/observe` y los backends OTLP/Langfuse como superficie de auditoría.
 - **Las métricas evitan la ruta de reintento/spool** — las métricas OTLP se agregan de forma acumulativa, así que un flush perdido se autocura en el siguiente (por diseño, no es un fallo).
 - **Sin muestreo** — toda familia de spans habilitada se exporta; ajusta los interruptores `capture.*` y `batch.maxBufferRecords` para sesiones de alto volumen.
@@ -182,7 +182,7 @@ Este plugin **no registra herramientas de modelo** — es un exportador en segun
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests contra los devDeps 0.1.7-alpha.1 (sin tsconfig paths)
+pnpm run typecheck  # tsc: src + tests contra los devDeps 0.1.7-alpha.2 (sin tsconfig paths)
 pnpm run typecheck:ci  # tsc contra la línea publicada (sin paths)
 pnpm run check:ruler-live  # canario: debe fallar al compilar, probando que la regla sigue viva
 pnpm test           # vitest: 126 tests, 18 suites (Context/Session/storage seam reales)
