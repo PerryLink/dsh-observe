@@ -30,7 +30,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.2` (adapted 2026-09-22): session format V4 represents a tool result as a first-class `role: 'tool'` message carrying top-level `toolCallId` + `content` + optional `isError` — the V3 `tool-result` content block is gone from the host's `ContentBlockMap`, and this plugin reads only the V4 shape (a pre-upgrade V3 log still projects through a read-only compatibility path). Session format V3's other traits carry over: the assistant stream is embedded in `assistant/message` / `assistant/attempt`, and the system prompt is surface node 0 (`system/message`); the plugin consumes only the live event stream and never reads session log files. The peer range `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0` keeps every published line installable (full local gate chain; the compat workflow covers the profile install smoke). |
+| Harness | DeepSeek Harness `dsh-v0.1.7-rc.1` (adapted 2026-09-22): session format V4 represents a tool result as a first-class `role: 'tool'` message carrying top-level `toolCallId` + `content` + optional `isError` — the V3 `tool-result` content block is gone from the host's `ContentBlockMap`, and this plugin reads only the V4 shape (a pre-upgrade V3 log still projects through a read-only compatibility path). Session format V3's other traits carry over: the assistant stream is embedded in `assistant/message` / `assistant/attempt`, and the system prompt is surface node 0 (`system/message`); the plugin consumes only the live event stream and never reads session log files. The peer range `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0` keeps every published line installable (full local gate chain; the compat workflow covers the profile install smoke). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Backends | OpenTelemetry OTLP/HTTP (traces + metrics, JSON encoding) and Langfuse (LLM observability) — either or both |
 | Model | Model-agnostic: it exports the session/event stream; no model calls are made |
@@ -174,7 +174,7 @@ This plugin registers **no model tools** — it is a background exporter. Its su
 
 ## Known limitations
 
-- **npm 0.1.7-alpha.2** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.7-alpha.2` (devDeps and CI's primary ruler); the peer range `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0` keeps every published line installable, and the second ruler (`typecheck:ci`) plus the compat workflow cover the older baselines.
+- **npm 0.1.7-rc.1** — the plugin is developed and tested against `@deepseek-ai/dsh@0.1.7-rc.1` (devDeps and CI's primary ruler); the peer range `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0` keeps every published line installable, and the second ruler (`typecheck:ci`) plus the compat workflow cover the older baselines.
 - **Audit events are not persisted** — the exporter's own `observe/*` records are audit-only: on the current host line the session append gate admits surface events, so no `observe/*` event is written to the session log, and the plugin does not fake one with an unmarked append (that would make sessions unreadable). Treat `/observe` status output and the OTLP/Langfuse backends as the audit surface.
 - **Metrics bypass the retry/spool path** — OTLP metrics are aggregated cumulatively, so a lost flush self-heals on the next one (by design, not a bug).
 - **No sampling** — every enabled span family is exported; set `capture.*` switches and `batch.maxBufferRecords` for high-volume sessions.
@@ -183,7 +183,7 @@ This plugin registers **no model tools** — it is a background exporter. Its su
 
 ```sh
 pnpm install        # node ^22.19 || >=24
-pnpm run typecheck  # tsc: src + tests against the 0.1.7-alpha.2 devDeps (no tsconfig paths)
+pnpm run typecheck  # tsc: src + tests against the 0.1.7-rc.1 devDeps (no tsconfig paths)
 pnpm run typecheck:ci  # tsc against the published line (no paths)
 pnpm run check:ruler-live  # canary: must fail to compile, proving the ruler is live
 pnpm test           # vitest: 126 tests, 18 suites (real Context/Session/storage seam)
