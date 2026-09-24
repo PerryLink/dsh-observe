@@ -1,6 +1,6 @@
 {
   "name": "dsh-observe",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "description": "OpenTelemetry and Langfuse observability exporter for DeepSeek Harness: turn/step/tool/LLM spans, token and cost metrics, and sanitized LLM prompt/completion capture from the session/event stream, with async batching, bounded offline buffering, and retry with backoff.",
   "repository": {
     "type": "git",
@@ -72,7 +72,8 @@
     "compatibility": {
       "dshVersions": [
         "0.1.7-alpha.2",
-        "0.1.7-rc.1"
+        "0.1.7-rc.1",
+        "0.1.7-rc.2"
       ]
     },
     "capability": {
@@ -124,16 +125,16 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-attachment": "0.1.7-rc.1",
+    "@deepseek-ai/dsh-attachment": "0.1.7-rc.2",
     "@deepseek-ai/cordis": "^4.0.3",
     "@deepseek-ai/cordis-plugin-include": "^1.0.7",
     "@deepseek-ai/cordis-plugin-loader": "^1.0.3",
-    "@deepseek-ai/dsh-llm": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-session": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-storage": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-storage-domain": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-storage-json": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-typert-protocol": "0.1.7-rc.1",
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-session": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-storage": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-storage-json": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.1.7-rc.2",
     "@deepseek-ai/schemastery": "^3.18.3",
     "@types/node": "^22.19.0",
     "@vitest/coverage-v8": "^3.2.0",
