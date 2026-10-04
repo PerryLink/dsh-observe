@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The Loader composition runner reports a failed row's own reason again. `cordis-plugin-loader` 1.0.6 (the pin this host line moved to) dropped the failure surface 1.0.4's `await()` had: `getTasks()` maps only `entry._initTask || entry.fiber?.inertia`, and by the time a row's config or `apply` has thrown both are cleared — `Entry._init()` clears `_initTask` in a `finally`, and cordis's `_reload()` catches the throw onto `fiber._error` and clears `inertia` — so `await()` returned as if the mount had succeeded. The two negative composition regressions therefore failed on the downstream symptom (`no OTLP /v1/traces export was issued`) instead of the config error they assert (`at least one backend`, `publicKey must be a non-empty string`). `scripts/loader-runner.mjs` now walks `ctx.loader.entries()` after `await()` and re-throws the first FAILED row's `fiber._error` (falling back to the exporter-captured error-level log record, then to a generic row message), throwing an `AggregateError` when several rows failed. Forcing the pre-move dependency instead would have narrowed the host line's own pin, so the recovery lives in the runner; `DSH_LOADER_RUNNER_NO_RETHROW=1` disables it for re-measurement only. No plugin source, exported surface or runtime behavior changed — this is a test-harness fidelity fix, and no README row is affected.
+
+### Changed
+
+- Host pins move to `0.2.1-alpha.1`; re-verified against that host line. Every `@deepseek-ai/dsh-*` dev/test dependency now pins `0.2.1-alpha.1`, the `dshWorkshop.compatibility.dshVersions` timeline appends `0.2.1-alpha.1`, and the compatibility baseline in every README records the `dsh-v0.2.1-alpha.1` host. The declared host ranges (`engines.dsh` and the `peerDependencies` union) gain the `|| >=0.2.0-0 <0.3.0 || >=0.2.1-0 <0.3.0` clauses: the previous upper bound was `<0.2.0`, which under semver rejects every 0.2.x host, so the probe host itself was not installable. Nothing was narrowed — the `0.1.x` clauses are unchanged, in place and in order.
+
 ## [0.2.18] - 2026-09-25
 
 ### Changed
