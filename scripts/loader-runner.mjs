@@ -9,7 +9,9 @@
 // Usage: node scripts/loader-runner.mjs <cordis.yml>
 // Exit 0 prints DSH_LOADER_RESULT <json>; any assertion or load failure exits
 // non-zero with the reason on stderr (used by the invalid-config and
-// default-export regression cases).
+// default-export regression cases). A row whose config or `apply` threw is
+// re-thrown by `rethrowFirstFailedRow()` below, because the loader's own
+// `await()` stopped reporting it on 1.0.6.
 
 import { Context } from '@deepseek-ai/cordis'
 import Include from '@deepseek-ai/cordis-plugin-include'
@@ -31,6 +33,16 @@ const configPath = resolve(configArgument)
 const configRequire = createRequire(resolve(import.meta.dirname, '../package.json'))
 
 const ctx = new Context()
+/** Error-severity log records, kept so a failed row's reason survives for the assertion. */
+const capturedErrors = []
+ctx.logger.exporter({
+  levels: { default: 0 },
+  export: (message) => {
+    if (message.level === 'error' || message.level === 0) {
+      capturedErrors.push(message.args?.[0] instanceof Error ? message.args[0] : new Error(String(message.args?.[0] ?? message.message ?? 'loader error')))
+    }
+  },
+})
 try {
   ctx.baseUrl = `${pathToFileURL(dirname(configPath)).href}/`
   await ctx.plugin(Loader)
@@ -49,6 +61,7 @@ try {
     config: { path: pathToFileURL(configPath).href },
   })
   await ctx.loader.await()
+  rethrowFirstFailedRow()
 
   // Authoritative behavior: with `enabled: true` + an OTLP backend, a turn
   // span must be exported through the pipeline on session/flush.
@@ -83,4 +96,40 @@ try {
   process.exit(1)
 } finally {
   await ctx.fiber.dispose()
+}
+
+/**
+ * Re-throw the first FAILED loader row's error.
+ *
+ * `cordis-plugin-loader` 1.0.6 dropped the failure surface `await()` had in
+ * 1.0.4: the old body collected `entry._await()` outcomes and threw the single
+ * failure (or an AggregateError), while 1.0.6's `getTasks()` only maps
+ * `entry._initTask || entry.fiber?.inertia` — and `Entry._init()` clears
+ * `_initTask` in a `finally` while the row's own `fiber.inertia` promise
+ * resolves (cordis `_reload()` catches the throw, stores it on `fiber._error`
+ * and clears `inertia`) — so a row whose config or `apply` threw leaves NO
+ * pending task behind and `await()` returns as if the mount succeeded. Without
+ * this walk the two negative composition regressions fail on the downstream
+ * symptom ("no OTLP /v1/traces export was issued") instead of the real reason,
+ * which is the config error the suite asserts.
+ *
+ * The reason is recovered from the FAILED row's own `fiber._error` — the
+ * documented `Fiber.await()` surface rethrows exactly that field, and it is
+ * set on this line, unlike the `fiber.error` accessor the migration notes
+ * describe. The error-level log records kept by the exporter above are the
+ * fallback for a row that failed without retaining one.
+ *
+ * `DSH_LOADER_RUNNER_NO_RETHROW=1` disables it for re-measurement only.
+ */
+function rethrowFirstFailedRow() {
+  if (process.env.DSH_LOADER_RUNNER_NO_RETHROW === '1') return
+  const failed = []
+  for (const entry of ctx.loader.entries()) {
+    const fiber = entry?.fiber
+    // FiberState.FAILED === 3 (const enum, erased at runtime).
+    if (fiber?.state !== 3) continue
+    failed.push(fiber._error ?? capturedErrors.shift() ?? new Error(`loader row ${String(entry?.options?.name ?? '?')} failed`))
+  }
+  if (failed.length === 1) throw failed[0]
+  if (failed.length > 1) throw new AggregateError(failed, 'loader fibers failed')
 }
