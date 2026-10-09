@@ -34,6 +34,14 @@
 Este plugin forma parte de la [familia de plugins DSH](https://github.com/PerryLink) (más de 40, todos Apache-2.0). Si te resulta útil, **dale una estrella**: no desbloquea nada, pero ayuda a que la siguiente persona lo encuentre antes.
 
 *English:* part of a 40+ plugin family for DeepSeek Harness. If it is useful, **a star helps the next person find it** — nothing is gated behind it.
+## What is dsh-observe?
+
+Exportador de observabilidad OpenTelemetry y Langfuse para DeepSeek Harness.
+
+Convierte los eventos de sesión en trazas OTLP y observaciones de Langfuse — saneado, con buffer y apagado por defecto.
+
+![Demostración de terminal de dsh-observe: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
+
 ## Compatibility
 
 | Superficie | Estado |
@@ -68,8 +76,12 @@ flujo session/event
 ## Quick start
 
 ```sh
+dsh plugin --profile web add github:PerryLink/dsh-observe
+```
+
+```sh
 # 1. instala el bundle en tu perfil
-dsh plugin --profile web add "github:PerryLink/dsh-observe#main"
+dsh plugin --profile web add github:PerryLink/dsh-observe
 
 # o desde npm (versiones publicadas)
 dsh plugin --profile web add dsh-observe
@@ -98,7 +110,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ## Install & uninstall
 
-- **Canal git** (último `main`): `dsh plugin --profile web add "github:PerryLink/dsh-observe#main"` — el script `prepare` compila solo con dependencias de producción.
+- **Canal git** (último `main`): `dsh plugin --profile web add github:PerryLink/dsh-observe` — el script `prepare` compila solo con dependencias de producción.
 - **Canal npm** (versiones publicadas): `dsh plugin --profile web add dsh-observe`.
 - **Canal tarball**: `pnpm pack` en este repositorio y luego `dsh plugin --profile web add ./dsh-observe-<version>.tgz`.
 - **Desinstalar**: `dsh plugin --profile web remove dsh-observe` (o elimina la fila del parche del perfil).

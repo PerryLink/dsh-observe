@@ -34,6 +34,14 @@
 这个插件是 [DSH 插件家族](https://github.com/PerryLink)的一员（40+ 个，全部 Apache-2.0）。如果你在用，**给个 star** —— 它不会解锁任何功能，但会让下一个人在搜索里更容易找到它。
 
 *English:* part of a 40+ plugin family for DeepSeek Harness. If it is useful, **a star helps the next person find it** — nothing is gated behind it.
+## What is dsh-observe?
+
+DeepSeek Harness 的 OpenTelemetry 与 Langfuse 可观测性导出器。
+
+把会话事件变成 OTLP 追踪与 Langfuse 观测 —— 脱敏、缓冲、默认关闭。
+
+![dsh-observe 终端演示：dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
+
 ## Compatibility
 
 | 方面 | 状态 |
@@ -68,8 +76,12 @@ session/event 流
 ## Quick start
 
 ```sh
+dsh plugin --profile web add github:PerryLink/dsh-observe
+```
+
+```sh
 # 1. 把 bundle 装进你的 profile
-dsh plugin --profile web add "github:PerryLink/dsh-observe#main"
+dsh plugin --profile web add github:PerryLink/dsh-observe
 
 # 或从 npm 安装（正式发布版）
 dsh plugin --profile web add dsh-observe
@@ -98,7 +110,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ## Install & uninstall
 
-- **git 通道**（最新 `main`）：`dsh plugin --profile web add "github:PerryLink/dsh-observe#main"` —— `prepare` 脚本仅用生产依赖构建。
+- **git 通道**（最新 `main`）：`dsh plugin --profile web add github:PerryLink/dsh-observe` —— `prepare` 脚本仅用生产依赖构建。
 - **npm 通道**（正式发布版）：`dsh plugin --profile web add dsh-observe`。
 - **tarball 通道**：在本仓库执行 `pnpm pack`，然后 `dsh plugin --profile web add ./dsh-observe-<version>.tgz`。
 - **卸载**：`dsh plugin --profile web remove dsh-observe`（或从 profile patch 中删除该行）。
