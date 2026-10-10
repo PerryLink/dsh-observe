@@ -43,6 +43,10 @@ DeepSeek Harness 的 OpenTelemetry 与 Langfuse 可观测性导出器。
 
 ![dsh-observe 终端演示：dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
 
+![Animated terminal demo of dsh-observe](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.gif)
+
+*同一次运行，动图版。*
+
 ## Compatibility
 
 | 方面 | 状态 |

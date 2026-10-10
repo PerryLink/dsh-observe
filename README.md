@@ -44,6 +44,10 @@ Turn session events into OTLP traces and Langfuse observations — sanitized, bu
 
 ![Terminal demo of dsh-observe: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
 
+![Animated terminal demo of dsh-observe](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.gif)
+
+*The same run, animated.*
+
 ## Compatibility
 
 | Surface | Status |

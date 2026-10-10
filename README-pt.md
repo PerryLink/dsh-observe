@@ -43,6 +43,10 @@ Transforme eventos de sessão em traces OTLP e observações Langfuse — sanead
 
 ![Demonstração de terminal do dsh-observe: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
 
+![Animated terminal demo of dsh-observe](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.gif)
+
+*A mesma execução, animada.*
+
 ## Compatibility
 
 | Superfície | Status |

@@ -43,6 +43,10 @@ DeepSeek Harness के लिए OpenTelemetry और Langfuse ऑब्ज़�
 
 ![dsh-observe का टर्मिनल डेमो: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
 
+![Animated terminal demo of dsh-observe](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.gif)
+
+*वही रन, एनिमेटेड।*
+
 ## Compatibility
 
 | सतह | स्थिति |
