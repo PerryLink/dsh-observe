@@ -21,6 +21,11 @@
 
 [English](README.md) · [简体中文](README-zh.md) · [Español](README-es.md) · [Português](README-pt.md) · [हिन्दी](README-hi.md)
 
+```sh
+dsh plugin --profile <name> add dsh-observe
+```
+
+
 </div>
 
 ---
@@ -29,6 +34,15 @@
 **📖 生态实测知识库**（实测数据，不是营销）：[插件开发指南 · 选型实测数据 · 维护取舍判据](https://perrylink.github.io/dsh-plugin-guide/)。
 
 <!-- star-cta -->
+## Install & uninstall
+
+- **git 通道**（最新 `main`）：`dsh plugin --profile web add github:PerryLink/dsh-observe` —— `prepare` 脚本仅用生产依赖构建。
+- **npm 通道**（正式发布版）：`dsh plugin --profile web add dsh-observe`。
+- **tarball 通道**：在本仓库执行 `pnpm pack`，然后 `dsh plugin --profile web add ./dsh-observe-<version>.tgz`。
+- **卸载**：`dsh plugin --profile web remove dsh-observe`（或从 profile patch 中删除该行）。
+
+> 如果 pnpm 对本包报 `ERR_PNPM_IGNORED_BUILDS`（esbuild 的平台二进制无害校验），在你的 `pnpm-workspace.yaml` 中加入 `allowBuilds: { esbuild: true }` —— `dsh` CLI 会打印确切片段。
+
 ## ⭐ 如果它帮到了你
 
 这个插件是 [DSH 插件家族](https://github.com/PerryLink)的一员（40+ 个，全部 Apache-2.0）。如果你在用，**给个 star** —— 它不会解锁任何功能，但会让下一个人在搜索里更容易找到它。
@@ -112,15 +126,6 @@ dsh --profile web
 ```sh
 dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 ```
-
-## Install & uninstall
-
-- **git 通道**（最新 `main`）：`dsh plugin --profile web add github:PerryLink/dsh-observe` —— `prepare` 脚本仅用生产依赖构建。
-- **npm 通道**（正式发布版）：`dsh plugin --profile web add dsh-observe`。
-- **tarball 通道**：在本仓库执行 `pnpm pack`，然后 `dsh plugin --profile web add ./dsh-observe-<version>.tgz`。
-- **卸载**：`dsh plugin --profile web remove dsh-observe`（或从 profile patch 中删除该行）。
-
-> 如果 pnpm 对本包报 `ERR_PNPM_IGNORED_BUILDS`（esbuild 的平台二进制无害校验），在你的 `pnpm-workspace.yaml` 中加入 `allowBuilds: { esbuild: true }` —— `dsh` CLI 会打印确切片段。
 
 ## Configuration
 

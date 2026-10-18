@@ -21,6 +21,11 @@
 
 [English](README.md) · [简体中文](README-zh.md) · [Español](README-es.md) · [Português](README-pt.md) · [हिन्दी](README-hi.md)
 
+```sh
+dsh plugin --profile <name> add dsh-observe
+```
+
+
 </div>
 
 ---
@@ -29,6 +34,15 @@
 **📖 इकोसिस्टम नॉलेज बेस** — मापे गए आँकड़े, मार्केटिंग नहीं: [डेवलपमेंट गाइड · चयन डेटा · रखरखाव मानदंड](https://perrylink.github.io/dsh-plugin-guide/)।
 
 <!-- star-cta -->
+## Install & uninstall
+
+- **git चैनल** (नवीनतम `main`): `dsh plugin --profile web add github:PerryLink/dsh-observe` — `prepare` स्क्रिप्ट केवल प्रोडक्शन निर्भरताओं से बिल्ड करती है।
+- **npm चैनल** (प्रकाशित रिलीज़): `dsh plugin --profile web add dsh-observe`।
+- **tarball चैनल**: इस रेपो में `pnpm pack`, फिर `dsh plugin --profile web add ./dsh-observe-<version>.tgz`।
+- **अनइंस्टॉल**: `dsh plugin --profile web remove dsh-observe` (या प्रोफ़ाइल पैच से पंक्ति हटाएँ)।
+
+> यदि pnpm इस पैकेज के लिए `ERR_PNPM_IGNORED_BUILDS` दिखाता है (esbuild का हानिरहित प्लेटफ़ॉर्म-बाइनरी सत्यापन), तो अपने `pnpm-workspace.yaml` में `allowBuilds: { esbuild: true }` जोड़ें — `dsh` CLI सटीक स्निपेट प्रिंट करता है।
+
 ## ⭐ 如果它帮到了你
 
 यह प्लगइन [DSH प्लगइन परिवार](https://github.com/PerryLink) का हिस्सा है (40+ प्लगइन, सभी Apache-2.0)। अगर यह उपयोगी लगे, तो **एक स्टार दें** — इससे कोई सुविधा अनलॉक नहीं होती, पर अगला व्यक्ति इसे खोज में आसानी से पा लेता है।
@@ -112,15 +126,6 @@ dsh --profile web
 ```sh
 dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 ```
-
-## Install & uninstall
-
-- **git चैनल** (नवीनतम `main`): `dsh plugin --profile web add github:PerryLink/dsh-observe` — `prepare` स्क्रिप्ट केवल प्रोडक्शन निर्भरताओं से बिल्ड करती है।
-- **npm चैनल** (प्रकाशित रिलीज़): `dsh plugin --profile web add dsh-observe`।
-- **tarball चैनल**: इस रेपो में `pnpm pack`, फिर `dsh plugin --profile web add ./dsh-observe-<version>.tgz`।
-- **अनइंस्टॉल**: `dsh plugin --profile web remove dsh-observe` (या प्रोफ़ाइल पैच से पंक्ति हटाएँ)।
-
-> यदि pnpm इस पैकेज के लिए `ERR_PNPM_IGNORED_BUILDS` दिखाता है (esbuild का हानिरहित प्लेटफ़ॉर्म-बाइनरी सत्यापन), तो अपने `pnpm-workspace.yaml` में `allowBuilds: { esbuild: true }` जोड़ें — `dsh` CLI सटीक स्निपेट प्रिंट करता है।
 
 ## Configuration
 
