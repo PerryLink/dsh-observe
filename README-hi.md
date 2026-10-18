@@ -41,7 +41,7 @@ DeepSeek Harness के लिए OpenTelemetry और Langfuse ऑब्ज़�
 
 सेशन इवेंट्स को OTLP traces और Langfuse observations में बदलें — सैनिटाइज़्ड, बफ़र्ड, डिफ़ॉल्ट रूप से बंद।
 
-![dsh-observe का टर्मिनल डेमो: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
+![dsh-observe का टर्मिनल डेमो: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-hero.png)
 
 ![Animated terminal demo of dsh-observe](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.gif)
 

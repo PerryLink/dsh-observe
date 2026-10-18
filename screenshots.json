@@ -1,5 +1,14 @@
-{
-  "screenshots": [
-    "docs/assets/dsh-observe-demo.png"
-  ]
-}
+[
+  {
+    "path": "docs/assets/dsh-observe-hero.png",
+    "kind": "hero",
+    "alt": "dsh-observe terminal output",
+    "caption": "Real dsh-observe test run; 138 tests passed."
+  },
+  {
+    "path": "docs/assets/dsh-observe-demo.gif",
+    "kind": "demo",
+    "alt": "Animated dsh-observe terminal session",
+    "caption": "The same run, assembled line by line."
+  }
+]

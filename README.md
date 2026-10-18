@@ -42,7 +42,7 @@ OpenTelemetry and Langfuse observability exporter for DeepSeek Harness.
 
 Turn session events into OTLP traces and Langfuse observations — sanitized, buffered, off by default.
 
-![Terminal demo of dsh-observe: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.png)
+![Terminal demo of dsh-observe: dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-hero.png)
 
 ![Animated terminal demo of dsh-observe](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.gif)
 
