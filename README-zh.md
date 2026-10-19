@@ -55,9 +55,10 @@ DeepSeek Harness 的 OpenTelemetry 与 Langfuse 可观测性导出器。
 
 把会话事件变成 OTLP 追踪与 Langfuse 观测 —— 脱敏、缓冲、默认关闭。
 
-![dsh-observe 终端演示：dsh-observe — opt in, point OTLP at your collector](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-hero.png)
+![dsh-observe 工作流图：安装 → 打开面板 → 操作。](docs/assets/dsh-observe-flow.svg)
 
-![Animated terminal demo of dsh-observe](https://raw.githubusercontent.com/PerryLink/dsh-observe/main/docs/assets/dsh-observe-demo.gif)
+*工作流概览：安装 → 打开面板 → 操作。下面的示例使用实际命令面。*
+
 
 *同一次运行，动图版。*
 
@@ -126,6 +127,18 @@ dsh --profile web
 ```sh
 dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 ```
+
+### 示例
+
+以下为插件真实入口；安装后调用一个即可。
+
+#### 详细示例
+
+- `/observe`
+
+#### 简短示例
+
+
 
 ## Configuration
 
