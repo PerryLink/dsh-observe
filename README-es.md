@@ -130,15 +130,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ### Ejemplos
 
-Son los puntos de entrada reales; instala y llama a uno.
-
-#### Ejemplo detallado
-
-- `/observe`
-
-#### Ejemplos breves
-
-
+Este plugin no registra un comando visible; se ejecuta como exportador en segundo plano, configurado desde sus ajustes.
 
 ## Configuration
 

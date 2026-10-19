@@ -130,15 +130,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ### 示例
 
-以下为插件真实入口；安装后调用一个即可。
-
-#### 详细示例
-
-- `/observe`
-
-#### 简短示例
-
-
+此插件不注册用户可见命令；它作为后台导出器运行，通过设置配置。
 
 ## Configuration
 

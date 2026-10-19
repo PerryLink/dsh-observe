@@ -130,15 +130,7 @@ dsh --profile web --dump-config | grep -A2 'id: dsh-observe'
 
 ### Examples
 
-These are the plugin's real entry points; install once, then call one.
-
-#### Detailed example
-
-- `/observe`
-
-#### Brief examples
-
-
+No user-facing command is registered; this plugin runs as a background exporter, configured through its settings.
 
 ## Configuration
 
