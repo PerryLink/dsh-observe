@@ -1,30 +1,30 @@
 #!/usr/bin/env node
-// Five-language README sync gate: the English file is the source of truth.
-// Every translation must carry the same `## ` section headings in the same
-// order and the same configuration-table keys, so a config change cannot
-// ship without its translations.
+// Five-language README sync gate: the Chinese file is the source of truth.
+// Every translation must carry the same number of `## ` sections (section
+// headings are localized by design) and the same configuration-table keys, so
+// a section or config change cannot ship without its translations.
 import { readFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const LANGUAGES = [
-  ['README.md', 'en'],
-  ['README-zh.md', 'zh'],
-  ['README-es.md', 'es'],
-  ['README-pt.md', 'pt'],
-  ['README-hi.md', 'hi'],
+  ['README.md', 'zh'],
+  ['README.en.md', 'en'],
+  ['README.es.md', 'es'],
+  ['README.pt.md', 'pt'],
+  ['README.hi.md', 'hi'],
 ]
 
-const headingsOf = (text) => text.split(/\r?\n/u)
-  .map(line => /^##\s+(.+)$/u.exec(line)?.[1]?.trim())
-  .filter((heading) => heading !== undefined)
+const sectionCountOf = (text) => text.split(/\r?\n/u)
+  .filter(line => /^##\s+.+$/u.test(line))
+  .length
 
-// Configuration-table keys: the first cell of every row under the
-// "Configuration" section (until the next `## ` heading).
+// Configuration-table keys: every backticked first cell of every row under the
+// localized "Configuration" section (until the next `## ` heading).
 const configKeysOf = (text) => {
   const lines = text.split(/\r?\n/u)
-  const start = lines.findIndex(line => /^##\s+Configuration\s*$/u.test(line))
+  const start = lines.findIndex(line => /^##\s+(Configuration|配置|Configuración|Configuração|कॉन्फ़िगरेशन)\s*$/u.test(line))
   if (start === -1) return []
   const end = lines.findIndex((line, index) => index > start && line.startsWith('## '))
   const section = lines.slice(start, end === -1 ? undefined : end)
@@ -34,8 +34,7 @@ const configKeysOf = (text) => {
     const cells = line.split('|').map(cell => cell.trim())
     if (cells.length < 2) continue
     const key = cells[1]
-    if (key === '' || key === 'Key') continue
-    if (/^-+$/u.test(key)) continue
+    if (key === undefined || !key.startsWith('`')) continue
     keys.push(key)
   }
   return keys
@@ -50,7 +49,7 @@ if (!existsSync(refPath)) {
   process.exit(1)
 }
 const refText = readFileSync(refPath, 'utf8')
-const refHeadings = headingsOf(refText)
+const refSections = sectionCountOf(refText)
 const refKeys = configKeysOf(refText)
 
 for (const [file, label] of LANGUAGES.slice(1)) {
@@ -60,14 +59,9 @@ for (const [file, label] of LANGUAGES.slice(1)) {
     continue
   }
   const text = readFileSync(filePath, 'utf8')
-  const headings = headingsOf(text)
-  for (let index = 0; index < refHeadings.length; index++) {
-    if (headings[index] !== refHeadings[index]) {
-      failures.push(`${file}: heading ${index + 1} is ${JSON.stringify(headings[index])}, expected ${JSON.stringify(refHeadings[index])}`)
-    }
-  }
-  if (headings.length !== refHeadings.length) {
-    failures.push(`${file}: ${headings.length} headings, expected ${refHeadings.length}`)
+  const sections = sectionCountOf(text)
+  if (sections !== refSections) {
+    failures.push(`${file}: ${sections} sections, expected ${refSections}`)
   }
   const keys = configKeysOf(text)
   if (keys.length !== refKeys.length) {

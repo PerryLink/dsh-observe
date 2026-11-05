@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="dsh-observe pipeline: session/event to collector to sanitize to otlp/langfuse pipeline, with a bounded durable spool">
+<title>dsh-observe pipeline</title>
+<rect width="1200" height="420" rx="18" fill="#ffffff"/>
+<text x="60" y="58" fill="#1f2328" font-family="ui-sans-serif,system-ui,sans-serif" font-size="30" font-weight="700">dsh-observe</text>
+<text x="60" y="88" fill="#57606a" font-family="ui-monospace,monospace" font-size="15">session/event · spans · metrics · otlp · langfuse</text>
+<line x1="60" y1="108" x2="1140" y2="108" stroke="#d0d7de"/>
+<rect x="60" y="140" width="240" height="96" rx="14" fill="#f6f8fa" stroke="#d0d7de" stroke-width="2"/>
+<text x="180" y="182" fill="#1f2328" text-anchor="middle" font-family="ui-monospace,monospace" font-size="17" font-weight="700">session/event</text>
+<text x="180" y="212" fill="#57606a" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">turn · step · tool · llm</text>
+<path d="M306 188h28" stroke="#57606a" stroke-width="3"/>
+<path d="M332 181l10 7-10 7" fill="none" stroke="#57606a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="340" y="140" width="240" height="96" rx="14" fill="#f6f8fa" stroke="#4B67B4" stroke-width="2"/>
+<text x="460" y="182" fill="#1f2328" text-anchor="middle" font-family="ui-monospace,monospace" font-size="17" font-weight="700">collector</text>
+<text x="460" y="212" fill="#57606a" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">spans · metrics · pricing</text>
+<path d="M586 188h28" stroke="#57606a" stroke-width="3"/>
+<path d="M612 181l10 7-10 7" fill="none" stroke="#57606a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="620" y="140" width="240" height="96" rx="14" fill="#f6f8fa" stroke="#4B67B4" stroke-width="2"/>
+<text x="740" y="182" fill="#1f2328" text-anchor="middle" font-family="ui-monospace,monospace" font-size="17" font-weight="700">sanitize</text>
+<text x="740" y="212" fill="#57606a" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">redactKeys · truncate*</text>
+<path d="M866 188h28" stroke="#57606a" stroke-width="3"/>
+<path d="M892 181l10 7-10 7" fill="none" stroke="#57606a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="900" y="140" width="240" height="96" rx="14" fill="#f6f8fa" stroke="#16a34a" stroke-width="2"/>
+<text x="1020" y="182" fill="#1f2328" text-anchor="middle" font-family="ui-monospace,monospace" font-size="17" font-weight="700">pipeline</text>
+<text x="1020" y="212" fill="#57606a" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">otlp · langfuse · retry</text>
+<path d="M740 236v36" stroke="#4B67B4" stroke-width="2" stroke-dasharray="5 5"/>
+<path d="M1020 236v36" stroke="#4B67B4" stroke-width="2" stroke-dasharray="5 5"/>
+<rect x="60" y="272" width="1080" height="48" rx="10" fill="#eaeef2" stroke="#4B67B4" stroke-width="2"/>
+<text x="600" y="302" fill="#1f2328" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13">spool · batch.maxBufferRecords 10000 · oldest-first · re-validated</text>
+<text x="60" y="352" fill="#57606a" font-family="ui-monospace,monospace" font-size="13">otlp.endpoint → /v1/traces · /v1/metrics · langfuse → ingestion</text>
+<text x="60" y="380" fill="#57606a" font-family="ui-monospace,monospace" font-size="13">enabled: false · sanitize → queue → flush → spool · retry.maxAttempts 5</text>
+</svg>
