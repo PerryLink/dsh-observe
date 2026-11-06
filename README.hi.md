@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-flow-dark.svg">
-  <img src="docs/assets/dsh-observe-flow-light.svg" width="100%" alt="dsh-observe डेटा प्रवाह: session/event → collector (turn/step/tool/llm स्पैन और मेट्रिक्स) → sanitize (कुंजी नाम, सीक्रेट, अक्षर बजट) → pipeline otlp | langfuse → कतार फ़्लश; पुनःप्रयास समाप्त होने पर सीमित टिकाऊ spool में">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-hero-en-dark.webp">
+  <img src="docs/assets/dsh-observe-hero-en-light.webp" width="100%" alt="dsh-observe: बाईं ओर प्लगइन का नाम, मूल्य-पंक्तियाँ और इंस्टॉल कमांड; दाईं ओर एक turn की trace वॉटरफ़ॉल — समय-अक्ष पर turn, step, टूल-कॉल और LLM स्पैन, LLM बार पर टोकन संख्या, नीचे spans, tokens, USD लागत और context दबाव के मेट्रिक्स; कार्ड बताता है कि सैनिटाइज़ेशन कतार से पहले होता है और गंतव्य OTLP और Langfuse हैं">
 </picture>
 
 # dsh-observe
@@ -37,6 +37,11 @@ dsh plugin --profile <name> add dsh-observe
 ## यह क्या है
 
 `dsh-observe` हार्नेस की `session/event` धारा को मानक अवलोकनीयता प्रोटोकॉल में अनुवादित करता है: प्रति turn एक ट्रेस, step, टूल-कॉल और LLM जनरेशन के लिए अलग स्पैन, टोकन और लागत के संचयी मेट्रिक्स, और prompt/completion का मुख्य भाग जो कतार में आने से पहले सैनिटाइज़ और छोटा किया जाता है। यह केवल एक्सपोर्ट करता है: कोई मॉडल टूल या उपयोगकर्ता-दृश्य कमांड पंजीकृत नहीं करता, और सारा व्यवहार कॉन्फ़िगरेशन से तय होता है। OTLP या Langfuse कॉन्फ़िगर करें, पुनः आरंभ करें, और डेटा स्वयं बहने लगता है; बिना कॉन्फ़िगरेशन कुछ भी एकत्र नहीं होता।
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-flow-v5-dark.svg">
+  <img src="docs/assets/dsh-observe-flow-v5-light.svg" width="100%" alt="dsh-observe संरचना (एक सीमित spool के इर्द-गिर्द दो पाइपलाइनों में फोर्क): session/event कलेक्टर को feed करता है (turn/step/tool/llm स्पैन तथा observe.tokens, observe.cost, observe.context_tokens मेट्रिक्स, नियतात्मक sha256 id), फिर sanitize (कुंजी-नाम redaction, अंतर्निहित सीक्रेट पैटर्न, prompt/completion 4000 और tool 2000/2000 अक्षर बजट) किसी भी कतार से पहले हर रिकॉर्ड साफ़ करता है; रिकॉर्ड दो स्वतंत्र पाइपलाइनों otlp और langfuse में बँटता है, हर एक कतार (256 रिकॉर्ड या 5000ms, maxQueueRecords 2000) → flush/retry (5 प्रयास, 1000ms × 2 बैकऑफ़, सीमा 60000ms) → अपने endpoint तक; पुनःप्रयास समाप्त होने और कतार भर जाने पर रिकॉर्ड दोनों पटरियों के बीच के सीमित storage-domain spool में जाते हैं (10000 रिकॉर्ड, सबसे पुराना पहले निकलता है, पढ़ते समय zod पुनः सत्यापन, पुनः आरंभ के बाद भी रहता है), और दाईं ओर की बिंदुदार रेल से हर 30000ms में दोनों endpoints को वापस भरे जाते हैं; नीचे बाईं ओर वैकल्पिक remote सतह observe/status और observe/setEnabled है, और नीचे की पट्टी डिफ़ॉल्ट-बंद अनुबंध तथा तीन सुने जाने वाले इवेंट बताती है">
+</picture>
 
 ## तीन चरणों में शुरुआत
 
@@ -317,7 +322,7 @@ node scripts/check-readme-sync.mjs  # पाँच-भाषा README सिं
 pnpm pack                  # प्रकाशित tarball
 ```
 
-README की छवियाँ [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) से बनती हैं (Python + Pillow टूलचेन); यह `docs/assets/dsh-observe-flow-{light,dark}.svg` जोड़ी लिखती है और idempotent है। पुराने एक-थीम `docs/assets/dsh-observe-flow.svg`, `dsh-observe-hero.png` और `dsh-observe-demo.{png,gif}` बाहरी लिंक के 404 से बचने के लिए वहीं रखे गए हैं; README अब उन्हें संदर्भित नहीं करते।
+README की छवियाँ [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) से बनती हैं (Pillow चार 1440×576 hero बनाता है; 1100×660 संरचना आरेख हाथ से लिखा SVG है), जो `docs/assets/dsh-observe-hero-{zh,en}-{light,dark}.webp` और `docs/assets/dsh-observe-flow-v5-{light,dark}.svg` जोड़ी लिखता है; दोबारा चलाना idempotent है। पुराने `docs/assets/dsh-observe-flow-{light,dark}.svg`, `dsh-observe-flow.svg`, `dsh-observe-hero.png` और `dsh-observe-demo.{png,gif}` बाहरी लिंक के 404 से बचने के लिए वहीं रखे गए हैं; README अब उन्हें संदर्भित नहीं करते।
 
 Topics: `dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `observability`, `opentelemetry`, `otlp`, `langfuse`, `tracing`
 

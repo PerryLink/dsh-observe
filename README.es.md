@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-flow-dark.svg">
-  <img src="docs/assets/dsh-observe-flow-light.svg" width="100%" alt="Flujo de datos de dsh-observe: session/event → collector (spans de turn/step/tool/llm y métricas) → sanitize (nombres de clave, secretos, presupuestos de caracteres) → pipeline otlp | langfuse → flush de la cola; al agotar los reintentos cae en un spool durable acotado">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-hero-en-dark.webp">
+  <img src="docs/assets/dsh-observe-hero-en-light.webp" width="100%" alt="dsh-observe: a la izquierda el nombre, las frases de valor y el comando de instalación; a la derecha la cascada de una traza de un turn — spans de turn, step, herramienta y LLM sobre un eje temporal, recuentos de tokens en las barras LLM y una franja de métricas de spans, tokens, coste en USD y presión de contexto; la tarjeta indica que el saneado va antes de la cola y nombra OTLP y Langfuse como destinos">
 </picture>
 
 # dsh-observe
@@ -37,6 +37,11 @@ dsh plugin --profile <name> add dsh-observe
 ## Qué es
 
 `dsh-observe` traduce el flujo `session/event` del harness a protocolos de observabilidad estándar: una traza por turn, un span por step, por llamada de herramienta y por generación LLM, métricas acumuladas de tokens y coste, y cuerpos de prompt/completion que se sanean y truncan antes de entrar en la cola. Solo exporta: no registra herramientas de modelo ni comandos visibles para el usuario, y todo su comportamiento se gobierna por configuración. Configura OTLP o Langfuse, reinicia y los datos fluyen solos; sin configuración no se captura absolutamente nada.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-flow-v5-dark.svg">
+  <img src="docs/assets/dsh-observe-flow-v5-light.svg" width="100%" alt="Estructura de dsh-observe (una bifurcación en dos canalizaciones alrededor de un búfer acotado): session/event alimenta el collector (spans turn/step/tool/llm y métricas observe.tokens, observe.cost y observe.context_tokens, ids sha256 deterministas), luego sanitize (redacción por nombre de clave, patrones de secretos integrados y presupuestos de prompt/completion 4000 y herramienta 2000/2000) sanea cada registro antes de cualquier cola; el registro se bifurca en dos canalizaciones independientes, otlp y langfuse, cada una con cola (256 registros o 5000ms, maxQueueRecords 2000) → flush/retry (5 intentos, 1000ms × 2 con tope de 60000ms) → su endpoint; el agotamiento de reintentos y el desbordamiento de cola caen en el búfer durable y acotado entre las pistas (10000 registros, expulsión del más antiguo, revalidación zod al leer, sobrevive al reinicio), vaciado de vuelta a ambos endpoints cada 30000ms por el riel discontinuo de la derecha; abajo a la izquierda está la superficie remota opcional observe/status y observe/setEnabled, y la banda inferior fija el contrato de apagado por defecto y los tres eventos escuchados">
+</picture>
 
 ## Instalación en tres pasos
 
@@ -317,7 +322,7 @@ node scripts/check-readme-sync.mjs  # puerta de sincronía de los README en cinc
 pnpm pack                  # el tarball publicado
 ```
 
-Las imágenes del README las genera [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) (Python + cadena de herramientas Pillow); escribe el par `docs/assets/dsh-observe-flow-{light,dark}.svg` y es idempotente. Los antiguos `docs/assets/dsh-observe-flow.svg` de un solo tema, `dsh-observe-hero.png` y `dsh-observe-demo.{png,gif}` se quedan donde están para que los enlaces externos no den 404; los README ya no los referencian.
+Las imágenes del README las genera [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) (Pillow dibuja los cuatro hero de 1440×576; el diagrama de estructura de 1100×660 es SVG escrito a mano), que escribe `docs/assets/dsh-observe-hero-{zh,en}-{light,dark}.webp` y el par `docs/assets/dsh-observe-flow-v5-{light,dark}.svg`; volver a ejecutarlo es idempotente. Los antiguos `docs/assets/dsh-observe-flow-{light,dark}.svg`, `dsh-observe-flow.svg`, `dsh-observe-hero.png` y `dsh-observe-demo.{png,gif}` se quedan donde están para que los enlaces externos no den 404; los README ya no los referencian.
 
 Topics: `dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `observability`, `opentelemetry`, `otlp`, `langfuse`, `tracing`
 

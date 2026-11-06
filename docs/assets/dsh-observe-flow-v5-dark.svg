@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="660" viewBox="0 0 1100 660" role="img" aria-labelledby="t d">
+<title id="t">dsh-observe delivery shape: the session/event capture spine forks into two independent backend pipelines — otlp and langfuse — that each queue, flush with retry, and post to their own endpoint, around one bounded storage-domain spool that both spill into and that drains back into both endpoints on a timer</title>
+<desc id="d">Left column, capture: session/event boundary events feed the collector (turn, step, tool and llm spans; observe.tokens, observe.cost and observe.context_tokens metrics; deterministic sha256 ids), then sanitize (key redaction, five builtin secret patterns, prompt/completion 4000, tool 2000/2000, attributes 512) runs at capture, before any queue. The record then forks into two lanes. Each lane is a pipeline (queue 256 records or 5000ms, maxQueueRecords 2000) into flush and retry (maxAttempts 5, 1000ms x2 capped at 60000ms, deterministic backoff) into its wire endpoint: OTLP POST /v1/traces and /v1/metrics with service.name deepseek-harness, or Langfuse POST /api/public/ingestion with trace-create, span-create and generation-create under Basic auth. Retry-exhausted batches and queue overflow spill into the bounded storage-domain spool between the lanes (maxBufferRecords 10000, oldest-first eviction, zod re-validation on read, survives restart); a dashed return rail on the right drains it back into both endpoints every 30000ms. Bottom left is the optional remote surface, observe/status and observe/setEnabled. The bottom band states the flush, retry and drain cadence and the off-by-default contract.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0.32" y2="1"><stop offset="0" stop-color="#131a2a"/><stop offset="1" stop-color="#0c1016"/></linearGradient>
+<filter id="soft" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="8" stdDeviation="11" flood-color="#000000" flood-opacity=".45"/></filter>
+<pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse"><circle cx="1.4" cy="1.4" r="1.4" fill="#2c3549"/></pattern>
+<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8496f5"/></marker>
+</defs>
+<rect width="1100" height="660" fill="url(#bg)"/>
+<rect width="1100" height="660" fill="url(#dots)" opacity=".45"/>
+<text x="44" y="58" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="30" font-weight="700">dsh-observe</text>
+<text x="44" y="86" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13.5">session/event → collector → sanitize → 2 pipelines · bounded spool · deterministic ids</text>
+<text x="1056" y="56" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" text-anchor="end">v0.2.27 · OTLP/HTTP + Langfuse</text>
+<text x="1056" y="84" fill="#8791a4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="11.5" text-anchor="end">solid = sync · dashed = async / optional</text>
+<line x1="40" y1="100" x2="1060" y2="100" stroke="#2e374b" stroke-width="2"/>
+<text x="60" y="126" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="1.4">CAPTURE</text>
+<rect x="44" y="134" width="248" height="64" rx="16" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="60" y="162" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700">session/event</text>
+<text x="60" y="182" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">turn/step/tool/llm boundaries</text>
+<path d="M168 198 L168 210" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<rect x="44" y="212" width="248" height="138" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="60" y="240" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">collector</text>
+<text x="60" y="266" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">span: turn · step · tool · llm</text>
+<text x="60" y="288" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">metric: observe.tokens · cost</text>
+<text x="60" y="310" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">observe.context_tokens (gauge)</text>
+<text x="60" y="338" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">ids = sha256(session, turn, part)</text>
+<path d="M168 350 L168 362" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<rect x="44" y="364" width="248" height="138" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="60" y="392" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">sanitize</text>
+<text x="60" y="418" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">redactKeys + 5 builtin patterns</text>
+<text x="60" y="440" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">prompt 4000 · completion 4000</text>
+<text x="60" y="462" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">tool 2000/2000 · attr 512</text>
+<text x="60" y="490" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">before any queue · [REDACTED]</text>
+<path d="M292 433 H312 V208 H320" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<path d="M312 433 V484 H320" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<text x="320" y="128" fill="#8496f5" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="1.4">BACKEND · otlp</text>
+<rect x="320" y="140" width="192" height="136" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="336" y="170" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700">pipeline "otlp"</text>
+<text x="336" y="196" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">queue 256 / 5000ms</text>
+<text x="336" y="218" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">maxQueueRecords 2000</text>
+<text x="336" y="246" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">push is synchronous</text>
+<rect x="536" y="140" width="224" height="136" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="552" y="170" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700">flush · retry</text>
+<text x="552" y="196" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">maxAttempts 5</text>
+<text x="552" y="218" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">1000ms × 2 → 60000ms</text>
+<text x="552" y="246" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">deterministic backoff</text>
+<path d="M735 175 A9 9 0 1 1 742 168" fill="none" stroke="#8496f5" stroke-width="1.6" stroke-linecap="round" marker-end="url(#arr)"/>
+<rect x="784" y="140" width="272" height="136" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="800" y="170" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700">POST /v1/traces</text>
+<text x="800" y="196" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">POST /v1/metrics</text>
+<text x="800" y="218" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">service.name deepseek-harness</text>
+<text x="800" y="246" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">JSON · cumulative sums</text>
+<path d="M512 208 L532 208" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<path d="M760 208 L780 208" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<text x="320" y="404" fill="#8496f5" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="1.4">BACKEND · langfuse</text>
+<rect x="320" y="416" width="192" height="136" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="336" y="446" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13.5" font-weight="700">pipeline "langfuse"</text>
+<text x="336" y="472" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">queue 256 / 5000ms</text>
+<text x="336" y="494" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">maxQueueRecords 2000</text>
+<text x="336" y="522" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">push is synchronous</text>
+<rect x="536" y="416" width="224" height="136" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="552" y="446" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700">flush · retry</text>
+<text x="552" y="472" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">maxAttempts 5</text>
+<text x="552" y="494" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">1000ms × 2 → 60000ms</text>
+<text x="552" y="522" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">deterministic backoff</text>
+<path d="M735 451 A9 9 0 1 1 742 444" fill="none" stroke="#8496f5" stroke-width="1.6" stroke-linecap="round" marker-end="url(#arr)"/>
+<rect x="784" y="416" width="272" height="136" rx="18" fill="#1b2231" stroke="#2e374b" stroke-width="1" filter="url(#soft)"/>
+<text x="800" y="446" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700">POST /api/public/ingestion</text>
+<text x="800" y="472" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">trace-create · span-create</text>
+<text x="800" y="494" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">generation-create · Basic auth</text>
+<text x="800" y="522" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">one ingestion POST per batch</text>
+<path d="M512 484 L532 484" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<path d="M760 484 L780 484" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#arr)"/>
+<rect x="320" y="300" width="736" height="88" rx="18" fill="#202939" stroke="#8496f5" stroke-width="1" filter="url(#soft)"/>
+<text x="336" y="328" fill="#f0f3f9" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700">spool · storage-domain "observe"</text>
+<text x="336" y="354" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">maxBufferRecords 10000 · oldest-first eviction</text>
+<text x="336" y="376" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="13">zod re-validate on read · survives restart</text>
+<rect x="966" y="312" width="72" height="24" rx="12" fill="#8496f5" opacity=".14"/>
+<text x="1002" y="328" fill="#8496f5" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" text-anchor="middle">bounded</text>
+<text x="1040" y="376" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" text-anchor="end">storage:write</text>
+<path d="M612 276 L612 296" fill="none" stroke="#8496f5" stroke-width="1.8" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+<path d="M652 276 L652 296" fill="none" stroke="#8496f5" stroke-width="1.8" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+<text x="672" y="294" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="11">retry exhausted</text>
+<path d="M612 416 L612 392" fill="none" stroke="#8496f5" stroke-width="1.8" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+<path d="M652 416 L652 392" fill="none" stroke="#8496f5" stroke-width="1.8" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+<text x="672" y="412" fill="#a8b1c4" font-family="Segoe UI, Microsoft YaHei, ui-sans-serif, system-ui, sans-serif" font-size="11">queue full</text>
+<path d="M1056 344 H1080 V484 H1058" fill="none" stroke="#8496f5" stroke-width="1.6" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+<path d="M1080 344 V208 H1058" fill="none" stroke="#8496f5" stroke-width="1.6" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+<text x="1052" y="406" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" text-anchor="end">drainSpool · 30000ms</text>
+<rect x="44" y="514" width="248" height="84" rx="16" fill="#202939" stroke="#2e374b" stroke-width="1" stroke-dasharray="5 5" filter="url(#soft)"/>
+<text x="60" y="536" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="1.4">OPTIONAL REMOTE</text>
+<text x="60" y="560" fill="#8496f5" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="700">observe/status</text>
+<text x="60" y="582" fill="#8496f5" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="700">observe/setEnabled</text>
+<text x="44" y="626" fill="#a8b1c4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">flush: 256 records or 5000ms · retry: 5 attempts, 1s × 2 capped at 60s · drain: 30000ms · metrics skip retry</text>
+<text x="44" y="648" fill="#8791a4" font-family="Consolas, ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5">off by default: enabled: true + at least one backend · no model tools · no commands · only session/event, session/flush, session/disposed</text>
+</svg>

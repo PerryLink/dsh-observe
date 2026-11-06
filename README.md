@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-flow-dark.svg">
-  <img src="docs/assets/dsh-observe-flow-light.svg" width="100%" alt="dsh-observe 数据流：session/event → collector（turn/step/tool/llm span 与指标）→ sanitize（键名、密钥、字符预算）→ pipeline otlp｜langfuse → 队列 flush；重试耗尽后落入有界持久 spool">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-hero-zh-dark.webp">
+  <img src="docs/assets/dsh-observe-hero-zh-light.webp" width="100%" alt="dsh-observe 配图：左列是插件名、价值句与安装命令；右侧是一条 turn 的 trace 瀑布——turn、step、工具调用与 LLM span 按时间轴排布，LLM 条上标着 token 数，下方是 spans、tokens、USD 成本与上下文压力指标，卡片底部注明脱敏先于入队、去向是 OTLP 与 Langfuse">
 </picture>
 
 # dsh-observe
@@ -37,6 +37,11 @@ dsh plugin --profile <name> add dsh-observe
 ## 它是什么
 
 `dsh-observe` 把 harness 的 `session/event` 流翻译成标准可观测协议：一个 turn 一条 trace，step、工具调用与 LLM 生成各是一个 span，token 与成本是累计指标，prompt/completion 正文先脱敏截断再入队。它只做导出——不注册任何模型工具、不注册用户可见命令，全部行为由配置决定；配置了 OTLP 或 Langfuse 之后重启，数据自己流走，没配置就什么都不采集。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-observe-flow-v5-dark.svg">
+  <img src="docs/assets/dsh-observe-flow-v5-light.svg" width="100%" alt="dsh-observe 结构图（双通道分叉 + 有界回环）：session/event 经 collector（turn/step/tool/llm span 与 observe.tokens、observe.cost、observe.context_tokens 指标，确定性 sha256 id）到 sanitize（键名脱敏、内置密钥模式、prompt/completion 4000 与 tool 2000/2000 字符预算），在入队之前完成脱敏；随后分叉成 otlp 与 langfuse 两条独立管线，每条是队列（256 条或 5000ms，maxQueueRecords 2000）→ flush/retry（5 次、1000ms×2 退避、上限 60000ms）→ 各自端点；重试耗尽与队列溢出落入两轨之间有界的 storage-domain spool（10000 条、最旧优先淘汰、读回 zod 复校验、重启仍在），每 30000ms 沿右侧虚线回环排空回两个端点；左下是可选 remote 面 observe/status 与 observe/setEnabled，底部注明默认关闭与三个监听事件">
+</picture>
 
 ## 三步上手
 
@@ -317,7 +322,7 @@ node scripts/check-readme-sync.mjs  # 五语 README 同步门
 pnpm pack                  # 发布用 tarball
 ```
 
-配图由 [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) 程序化生成（Python + Pillow 工具链），输出 `docs/assets/dsh-observe-flow-{light,dark}.svg` 深浅双版，可重复执行。旧的单版 `docs/assets/dsh-observe-flow.svg`、`dsh-observe-hero.png` 与 `dsh-observe-demo.{png,gif}` 保留在原处以防外链失效，README 不再引用。
+配图由 [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) 程序化生成（Pillow 绘制 1440×576 hero，结构图为手写 1100×660 SVG），输出 `docs/assets/dsh-observe-hero-{zh,en}-{light,dark}.webp` 四张与 `docs/assets/dsh-observe-flow-v5-{light,dark}.svg` 一对，可重复执行。旧的 `docs/assets/dsh-observe-flow-{light,dark}.svg`、`dsh-observe-flow.svg`、`dsh-observe-hero.png` 与 `dsh-observe-demo.{png,gif}` 保留在原处以防外链失效，README 不再引用。
 
 Topics：`dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `observability`, `opentelemetry`, `otlp`, `langfuse`, `tracing`
 
