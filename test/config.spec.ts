@@ -18,7 +18,7 @@ describe('Config schema', () => {
     expect(resolved.otlp).toBeUndefined()
     expect(resolved.langfuse).toBeUndefined()
     expect(resolved.capture).toEqual({ turns: true, steps: true, tools: true, llm: true })
-    expect(resolved.llm).toEqual({ prompt: true, completion: true })
+    expect(resolved.llm).toEqual({ prompt: true, completion: true, reasoning: true })
     expect(resolved.metadata).toEqual({ sessionId: true, cwd: false, agentPreset: true, model: true })
     expect(resolved.metrics).toEqual({ tokens: true, cost: true, contextTokens: true })
     expect(resolved.pricing).toEqual([])

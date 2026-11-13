@@ -138,11 +138,12 @@ session/event धारा
 | `langfuse.traceName` | `session {session} turn {turn}` | ट्रेस-नाम टेम्पलेट; `{session}`/`{turn}` प्रति ट्रेस प्रतिस्थापित होते हैं |
 | `capture.llm` | `true` | LLM जनरेशन स्पैन |
 | `llm.prompt` | `true` | सैनिटाइज़ किया गया अनुरोध prompt कैप्चर करें (`false` = केवल आकार) |
+| `llm.reasoning` | `true` | reasoning को अलग से `gen_ai.completion.reasoning` में कैप्चर करें (`false` = केवल उत्तर) |
 | `batch.maxBufferRecords` | `10000` | टिकाऊ ऑफ़लाइन बफ़र की सीमा; सबसे पुराने रिकॉर्ड पहले गिरते हैं |
 | `remote.enabled` | `false` | `observe` Typert remote माउंट करें (रनटाइम किल स्विच) |
 
 <details>
-<summary>पूरी कॉन्फ़िगरेशन तालिका (47 कुंजियाँ)</summary>
+<summary>पूरी कॉन्फ़िगरेशन तालिका (48 कुंजियाँ)</summary>
 
 | कुंजी | डिफ़ॉल्ट | अर्थ |
 |---|---|---|
@@ -167,6 +168,7 @@ session/event धारा
 | `capture.llm` | `true` | LLM जनरेशन स्पैन |
 | `llm.prompt` | `true` | सैनिटाइज़ किया गया अनुरोध prompt कैप्चर करें (`false` = केवल आकार) |
 | `llm.completion` | `true` | सैनिटाइज़ की गई completion कैप्चर करें (`false` = केवल आकार) |
+| `llm.reasoning` | `true` | reasoning को अलग से `gen_ai.completion.reasoning` में कैप्चर करें (`false` = केवल उत्तर) |
 | `metadata.sessionId` | `true` | सत्र id विशेषता |
 | `metadata.cwd` | `false` | सत्र कार्य निर्देशिका (एक स्थानीय पथ — डिफ़ॉल्ट रूप से बंद) |
 | `metadata.agentPreset` | `true` | agent preset id विशेषता |
@@ -195,6 +197,8 @@ session/event धारा
 | `remote.enabled` | `false` | `observe` Typert remote माउंट करें (रनटाइम किल स्विच) |
 
 </details>
+
+> ⚠️ **reasoning अनुपालन सूचना** — `llm.reasoning` डिफ़ॉल्ट रूप से चालू है और reasoning अलग से `gen_ai.completion.reasoning` के रूप में भेजा जाता है (कभी `gen_ai.completion` के अंदर नहीं; Langfuse में यह generation के metadata में जाता है)। चिंतन-श्रृंखला में उपयोगकर्ता का मूल पाठ या मॉडल द्वारा शब्दशः उद्धृत संदर्भ हो सकता है, इसलिए **भेजने से पहले अनुपालन प्रभाव का आकलन करें**। छोड़ने के लिए `llm.reasoning: false` सेट करें; `llm.completion: false` उत्तर और reasoning दोनों हटा देता है।
 
 id-लक्षित ओवरराइड का उदाहरण (पूरी पंक्ति बदलती है, इसलिए ज़रूरत की कुंजियाँ दोबारा लिखें):
 

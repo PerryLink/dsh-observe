@@ -40,7 +40,13 @@ export interface LlmSpanInfo {
   finishReason?: string
   ttftMs?: number
   input?: string
+  /** Sanitized visible answer text (`gen_ai.completion`); never contains reasoning. */
   output?: string
+  /**
+   * Sanitized chain-of-thought text, exported as `gen_ai.completion.reasoning`
+   * and never merged into {@link output}. Empty reasoning is omitted.
+   */
+  reasoning?: string
   costUsd?: number
 }
 

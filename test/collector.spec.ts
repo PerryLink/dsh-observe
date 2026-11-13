@@ -6,7 +6,7 @@
  * @module dsh-observe/test/collector.spec
  */
 
-import type { AssistantStreamRecord, StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { AssistantStreamRecord, ContentBlock, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { createAssistantMessage, createSystemMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm/message'
 import type { Session, SessionEvent, SessionEventMap, SessionEventType } from '@deepseek-ai/dsh-session'
 import { describe, expect, it } from 'vitest'
@@ -547,6 +547,132 @@ describe('collector capture switches', () => {
       feed(base.session, handle, 'step/end', { turn: 1, step: 1 })
       feed(base.session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
       expect(spans.some(span => span.kind === 'step')).toBe(true)
+    } finally {
+      await unmountBase(base)
+    }
+  })
+})
+
+/**
+ * The completion/reasoning split. `gen_ai.completion` must stay the visible
+ * answer; chain-of-thought travels separately and only under its own switch.
+ * These pin the collector side of the wire contract exercised in
+ * `test/sinks.spec.ts`.
+ */
+describe('collector reasoning capture', () => {
+  /** Drive one assistant step whose message carries `content`, then close the turn. */
+  function oneAssistantStep(
+    session: Session,
+    handle: (event: SessionEvent) => void,
+    content: ContentBlock[],
+  ): void {
+    feed(session, handle, 'turn/start', { turn: 1 })
+    feed(session, handle, 'step/start', { turn: 1, step: 1 })
+    feedSurface(session, handle, 'assistant/message', {
+      turn: 1,
+      step: 1,
+      message: createAssistantMessage({ content, source: { provider: 'p', model: 'm' } }),
+      stream: [],
+    })
+    feed(session, handle, 'step/end', { turn: 1, step: 1 })
+    feed(session, handle, 'turn/end', { turn: 1, reason: { kind: 'completed' } })
+  }
+
+  it('keeps reasoning out of the completion and exports it as its own body', async () => {
+    const base = await mountBase('collector-reasoning-split')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      oneAssistantStep(base.session, handle, [
+        { type: 'reasoning', text: 'private chain of thought' },
+        { type: 'text', text: 'final answer' },
+      ])
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.llm?.output).toBe('final answer')
+      expect(llm?.llm?.output).not.toContain('private chain of thought')
+      expect(llm?.llm?.reasoning).toBe('private chain of thought')
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  it('omits the reasoning body when llm.reasoning is false (text still flows)', async () => {
+    const base = await mountBase('collector-reasoning-off')
+    try {
+      const { spans, handle } = drive(base.session, {
+        enabled: true,
+        otlp: { endpoint: 'http://x' },
+        llm: { reasoning: false },
+      })
+      oneAssistantStep(base.session, handle, [
+        { type: 'reasoning', text: 'private chain of thought' },
+        { type: 'text', text: 'final answer' },
+      ])
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.llm?.output).toBe('final answer')
+      expect(llm?.llm?.reasoning).toBeUndefined()
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  it('emits an empty completion for a reasoning-only turn instead of the CoT', async () => {
+    const base = await mountBase('collector-reasoning-only')
+    try {
+      const { spans, handle } = drive(base.session, { enabled: true, otlp: { endpoint: 'http://x' } })
+      oneAssistantStep(base.session, handle, [
+        { type: 'reasoning', text: 'only chain of thought' },
+      ])
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.llm?.output).toBe('')
+      expect(llm?.llm?.output).not.toContain('only chain of thought')
+      expect(llm?.llm?.reasoning).toBe('only chain of thought')
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  it('drops both bodies when llm.completion is false', async () => {
+    const base = await mountBase('collector-completion-off')
+    try {
+      const { spans, handle } = drive(base.session, {
+        enabled: true,
+        otlp: { endpoint: 'http://x' },
+        llm: { completion: false },
+      })
+      oneAssistantStep(base.session, handle, [
+        { type: 'reasoning', text: 'private chain of thought' },
+        { type: 'text', text: 'final answer' },
+      ])
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm).toBeDefined()
+      expect(llm?.llm?.output).toBeUndefined()
+      expect(llm?.llm?.reasoning).toBeUndefined()
+    } finally {
+      await unmountBase(base)
+    }
+  })
+
+  it('sanitizes and truncates the reasoning body like the completion', async () => {
+    const base = await mountBase('collector-reasoning-sanitize')
+    try {
+      const { spans, handle } = drive(base.session, {
+        enabled: true,
+        otlp: { endpoint: 'http://x' },
+        sanitize: { truncateCompletionChars: 40 },
+      })
+      oneAssistantStep(base.session, handle, [
+        { type: 'reasoning', text: `leaked key sk-abc12345678901234567890 ${'x'.repeat(80)}` },
+        { type: 'text', text: 'ok' },
+      ])
+
+      const llm = spans.find(span => span.kind === 'llm')
+      expect(llm?.llm?.reasoning).not.toContain('sk-abc12345678901234567890')
+      expect(llm?.llm?.reasoning?.length).toBeLessThanOrEqual(40)
+      expect(llm?.llm?.output).toBe('ok')
     } finally {
       await unmountBase(base)
     }

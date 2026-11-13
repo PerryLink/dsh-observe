@@ -45,10 +45,15 @@
           tools: true
           llm: true
         # LLM prompt/completion capture policy. `false` records only sizes
-        # and counts, never bodies.
+        # and counts, never bodies. `completion: false` drops the answer AND
+        # the reasoning body; `reasoning` only narrows it further. Reasoning
+        # is exported separately (gen_ai.completion.reasoning), never merged
+        # into gen_ai.completion, and may quote user input verbatim — evaluate
+        # the compliance impact before exporting it.
         llm:
           prompt: true
           completion: true
+          reasoning: true
         # Metadata capture switches. `cwd` is a local path — off by default.
         metadata:
           sessionId: true

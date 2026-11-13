@@ -126,8 +126,20 @@ function otlpSpan(span: SpanRecord): Record<string, unknown> {
   if (span.llm?.input !== undefined) {
     events.push({ name: 'gen_ai.prompt', attributes: [otlpAttribute('gen_ai.prompt', span.llm.input)] })
   }
-  if (span.llm?.output !== undefined) {
-    events.push({ name: 'gen_ai.completion', attributes: [otlpAttribute('gen_ai.completion', span.llm.output)] })
+  // The completion event carries the visible answer in `gen_ai.completion`.
+  // Reasoning, when released, is a sibling attribute on the same event — never
+  // concatenated into the completion body, so a backend can tell the final
+  // answer from chain-of-thought (and never prices/displays CoT as completion
+  // output). Both values are bounded strings (sanitize.truncateCompletionChars).
+  if (span.llm?.output !== undefined || span.llm?.reasoning !== undefined) {
+    const completion: Record<string, unknown>[] = []
+    if (span.llm?.output !== undefined) {
+      completion.push(otlpAttribute('gen_ai.completion', span.llm.output))
+    }
+    if (span.llm?.reasoning !== undefined) {
+      completion.push(otlpAttribute('gen_ai.completion.reasoning', span.llm.reasoning))
+    }
+    events.push({ name: 'gen_ai.completion', attributes: completion })
   }
   const error = span.status === 'error'
   return {
@@ -445,7 +457,14 @@ export class LangfuseSink implements SpanSink {
         startTime: isoTimestamp(span.startUnixNano),
         endTime: isoTimestamp(span.endUnixNano),
         ...(span.llm?.model === undefined ? {} : { model: span.llm.model }),
-        metadata: { ...span.attributes, ...(span.llm?.costUsd === undefined ? {} : { costUsd: span.llm.costUsd }) },
+        // Langfuse's generation `output` means the final answer, so it stays
+        // text-only. Chain-of-thought rides in metadata under the same attribute
+        // name the OTLP event uses, keeping it visible but distinguishable.
+        metadata: {
+          ...span.attributes,
+          ...(span.llm?.costUsd === undefined ? {} : { costUsd: span.llm.costUsd }),
+          ...(span.llm?.reasoning === undefined ? {} : { 'gen_ai.completion.reasoning': span.llm.reasoning }),
+        },
         ...(span.llm?.input === undefined ? {} : { input: span.llm.input }),
         ...(span.llm?.output === undefined ? {} : { output: span.llm.output }),
         ...(usage === undefined ? {} : {

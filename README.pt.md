@@ -138,11 +138,12 @@ Chaves mais usadas:
 | `langfuse.traceName` | `session {session} turn {turn}` | Template do nome do trace; `{session}`/`{turn}` são interpolados por trace |
 | `capture.llm` | `true` | Spans de geração LLM |
 | `llm.prompt` | `true` | Captura o prompt da requisição já saneado (`false` = só tamanhos) |
+| `llm.reasoning` | `true` | Captura o raciocínio separadamente como `gen_ai.completion.reasoning` (`false` = só a resposta) |
 | `batch.maxBufferRecords` | `10000` | Limite do buffer offline durável; os registros mais antigos caem primeiro |
 | `remote.enabled` | `false` | Monta o remote Typert `observe` (interruptor em tempo real) |
 
 <details>
-<summary>Tabela completa de configuração (47 chaves)</summary>
+<summary>Tabela completa de configuração (48 chaves)</summary>
 
 | Chave | Padrão | Significado |
 |---|---|---|
@@ -167,6 +168,7 @@ Chaves mais usadas:
 | `capture.llm` | `true` | Spans de geração LLM |
 | `llm.prompt` | `true` | Captura o prompt da requisição já saneado (`false` = só tamanhos) |
 | `llm.completion` | `true` | Captura a completion já saneada (`false` = só tamanhos) |
+| `llm.reasoning` | `true` | Captura o raciocínio separadamente como `gen_ai.completion.reasoning` (`false` = só a resposta) |
 | `metadata.sessionId` | `true` | Atributo do id da sessão |
 | `metadata.cwd` | `false` | Diretório de trabalho da sessão (um caminho local; desativado por padrão) |
 | `metadata.agentPreset` | `true` | Atributo do id do preset de agente |
@@ -195,6 +197,8 @@ Chaves mais usadas:
 | `remote.enabled` | `false` | Monta o remote Typert `observe` (interruptor em tempo real) |
 
 </details>
+
+> ⚠️ **Aviso de conformidade sobre o raciocínio** — `llm.reasoning` vem ativado por padrão e o raciocínio é exportado separadamente como `gen_ai.completion.reasoning` (nunca dentro de `gen_ai.completion`; no Langfuse ele vai nos metadados da generation). A cadeia de pensamento pode conter a entrada original do usuário ou contexto que o modelo cita literalmente, então **avalie o impacto de conformidade antes de exportá-la**. Defina `llm.reasoning: false` para omiti-la; `llm.completion: false` descarta tanto a resposta quanto o raciocínio.
 
 Exemplo de sobrescrita por id (substitui a linha inteira, então redeclare as chaves necessárias):
 

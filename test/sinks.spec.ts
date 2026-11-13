@@ -159,6 +159,38 @@ describe('OtlpSink exportSpans', () => {
     expect(attrs.get('gen_ai.usage.cache_write_tokens')).toEqual({ intValue: '1' })
     expect(attrs.get('gen_ai.usage.reasoning_tokens')).toEqual({ intValue: '3' })
   })
+
+  it('exports reasoning as a sibling of gen_ai.completion, never inside it', async () => {
+    const fetchMock = installFetch()
+    const sink = new OtlpSink(otlpConfig(), logger)
+    await sink.exportSpans([recordOf(span({
+      kind: 'llm',
+      step: 1,
+      llm: { model: 'deepseek-chat', output: 'final answer', reasoning: 'private chain of thought' },
+    }))])
+    const body = JSON.parse(String(fetchMock.calls[0]?.init.body)) as {
+      resourceSpans: Array<{ scopeSpans: Array<{ spans: Array<{ events: Array<{ name: string; attributes: Array<{ key: string; value: Record<string, unknown> }> }> }> }> }>
+    }
+    const llmSpan = body.resourceSpans[0]?.scopeSpans[0]?.spans[0]
+    const completion = llmSpan?.events.find(event => event.name === 'gen_ai.completion')
+    const attrs = new Map((completion?.attributes ?? []).map(item => [item.key, item.value]))
+    expect(attrs.get('gen_ai.completion')).toEqual({ stringValue: 'final answer' })
+    expect(attrs.get('gen_ai.completion.reasoning')).toEqual({ stringValue: 'private chain of thought' })
+    // The completion body itself stays CoT-free.
+    expect(JSON.stringify(attrs.get('gen_ai.completion'))).not.toContain('private chain of thought')
+    // Absent reasoning adds no attribute (the switch-off shape).
+    await sink.exportSpans([recordOf(span({
+      kind: 'llm',
+      step: 2,
+      llm: { model: 'deepseek-chat', output: 'plain answer' },
+    }))])
+    const second = JSON.parse(String(fetchMock.calls[1]?.init.body)) as {
+      resourceSpans: Array<{ scopeSpans: Array<{ spans: Array<{ events: Array<{ name: string; attributes: Array<{ key: string }> }> }> }> }>
+    }
+    const secondCompletion = second.resourceSpans[0]?.scopeSpans[0]?.spans[0]?.events
+      .find(event => event.name === 'gen_ai.completion')
+    expect(secondCompletion?.attributes.map(item => item.key)).toEqual(['gen_ai.completion'])
+  })
 })
 
 describe('OtlpSink metrics', () => {
@@ -235,6 +267,22 @@ describe('LangfuseSink', () => {
     const generation = body.batch.find(event => event.type === 'generation-create')
     expect(generation?.body.model).toBe('deepseek-chat')
     expect(generation?.body.usage).toEqual({ input: 13, output: 5, total: 18, unit: 'TOKENS' })
+  })
+
+  it('keeps reasoning out of the generation output and carries it in metadata', async () => {
+    const fetchMock = installFetch()
+    const sink = new LangfuseSink(langfuseConfig(), logger)
+    await sink.exportSpans([recordOf(span({
+      kind: 'llm',
+      step: 1,
+      llm: { model: 'deepseek-chat', output: 'final answer', reasoning: 'private chain of thought' },
+    }))])
+    const body = JSON.parse(String(fetchMock.calls[0]?.init.body)) as { batch: Array<{ type: string; body: Record<string, unknown> }> }
+    const generation = body.batch.find(event => event.type === 'generation-create')
+    expect(generation?.body.output).toBe('final answer')
+    expect(String(generation?.body.output)).not.toContain('private chain of thought')
+    const metadata = (generation?.body.metadata ?? {}) as Record<string, unknown>
+    expect(metadata['gen_ai.completion.reasoning']).toBe('private chain of thought')
   })
 
   it('throws on non-2xx and on per-event ingestion errors (retryable)', async () => {

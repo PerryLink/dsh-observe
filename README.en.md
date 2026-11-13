@@ -138,11 +138,12 @@ Most-used keys:
 | `langfuse.traceName` | `session {session} turn {turn}` | Trace-name template; `{session}`/`{turn}` interpolate per trace |
 | `capture.llm` | `true` | LLM generation spans |
 | `llm.prompt` | `true` | Capture the sanitized request prompt (`false` = sizes only) |
+| `llm.reasoning` | `true` | Capture reasoning separately as `gen_ai.completion.reasoning` (`false` = answer only) |
 | `batch.maxBufferRecords` | `10000` | Durable offline buffer bound; oldest records drop first |
 | `remote.enabled` | `false` | Mount the `observe` Typert remote (runtime kill switch) |
 
 <details>
-<summary>Full configuration table (47 keys)</summary>
+<summary>Full configuration table (48 keys)</summary>
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -167,6 +168,7 @@ Most-used keys:
 | `capture.llm` | `true` | LLM generation spans |
 | `llm.prompt` | `true` | Capture the sanitized request prompt (`false` = sizes only) |
 | `llm.completion` | `true` | Capture the sanitized completion (`false` = sizes only) |
+| `llm.reasoning` | `true` | Capture reasoning separately as `gen_ai.completion.reasoning` (`false` = answer only) |
 | `metadata.sessionId` | `true` | Session id attribute |
 | `metadata.cwd` | `false` | Session working directory (a local path — off by default) |
 | `metadata.agentPreset` | `true` | Agent preset id attribute |
@@ -195,6 +197,8 @@ Most-used keys:
 | `remote.enabled` | `false` | Mount the `observe` Typert remote (runtime kill switch) |
 
 </details>
+
+> ⚠️ **Reasoning compliance note** — `llm.reasoning` is on by default and reasoning is exported separately as `gen_ai.completion.reasoning` (never inside `gen_ai.completion`; in Langfuse it rides in the generation metadata). Chain-of-thought may contain the user's raw input or context the model quotes verbatim, so **evaluate the compliance impact before exporting it**. Set `llm.reasoning: false` to omit it; `llm.completion: false` drops both the answer and the reasoning.
 
 Example id-targeted override (it replaces the whole row, so restate the keys you need):
 

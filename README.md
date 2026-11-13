@@ -138,11 +138,12 @@ session/event 流
 | `langfuse.traceName` | `session {session} turn {turn}` | trace 名称模板；`{session}`/`{turn}` 按 trace 插值 |
 | `capture.llm` | `true` | LLM 生成 span 开关 |
 | `llm.prompt` | `true` | 采集脱敏后的请求 prompt（`false` 只记大小） |
+| `llm.reasoning` | `true` | 单独采集 reasoning（思维链）到 `gen_ai.completion.reasoning`（`false` = 只发正文） |
 | `batch.maxBufferRecords` | `10000` | 持久离线缓冲上限；最旧记录先丢 |
 | `remote.enabled` | `false` | 挂载 `observe` Typert remote（运行时总开关） |
 
 <details>
-<summary>完整配置表（47 个键）</summary>
+<summary>完整配置表（48 个键）</summary>
 
 | 键 | 默认值 | 含义 |
 |---|---|---|
@@ -167,6 +168,7 @@ session/event 流
 | `capture.llm` | `true` | LLM 生成 span |
 | `llm.prompt` | `true` | 采集脱敏后的请求 prompt（`false` 只记大小） |
 | `llm.completion` | `true` | 采集脱敏后的 completion（`false` 只记大小） |
+| `llm.reasoning` | `true` | 单独采集 reasoning（思维链）到 `gen_ai.completion.reasoning`（`false` = 只发正文） |
 | `metadata.sessionId` | `true` | 会话 id 属性 |
 | `metadata.cwd` | `false` | 会话工作目录（本地路径——默认关闭） |
 | `metadata.agentPreset` | `true` | agent preset id 属性 |
@@ -195,6 +197,8 @@ session/event 流
 | `remote.enabled` | `false` | 挂载 `observe` Typert remote（运行时总开关） |
 
 </details>
+
+> ⚠️ **reasoning 合规提示**：`llm.reasoning` 默认开启，reasoning 会作为 `gen_ai.completion.reasoning` 单独外发（绝不混入 `gen_ai.completion`；在 Langfuse 中放在 generation 的 metadata 里）。思维链可能包含用户原文，或模型逐字复述的上下文，**外发前请评估合规要求**；不需要时设 `llm.reasoning: false`。`llm.completion: false` 会同时关掉正文与 reasoning。
 
 按 id 覆盖的示例（会替换整行，所以重述需要的键）：
 

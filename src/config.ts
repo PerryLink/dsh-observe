@@ -32,6 +32,14 @@ export interface LlmCaptureConfig {
   prompt?: boolean
   /** Capture the sanitized assistant completion. `false` records only sizes. */
   completion?: boolean
+  /**
+   * Capture the sanitized reasoning (chain-of-thought) body as a separate
+   * `gen_ai.completion.reasoning` value. Only effective while `completion` is
+   * on — `completion: false` drops both bodies. Reasoning may quote user input
+   * or model-visible context verbatim, so evaluate the compliance impact of
+   * exporting it before leaving this on.
+   */
+  reasoning?: boolean
 }
 
 /** Metadata capture switches; every one defaults to off except session identity. */
@@ -211,6 +219,7 @@ export interface ResolvedCapture {
 export interface ResolvedLlmCapture {
   readonly prompt: boolean
   readonly completion: boolean
+  readonly reasoning: boolean
 }
 
 /** Fully resolved metadata policy. */
@@ -323,7 +332,8 @@ export const Config: z<Config> = z.object({
   llm: z.object({
     prompt: z.boolean().default(true),
     completion: z.boolean().default(true),
-  }).default({ prompt: true, completion: true }),
+    reasoning: z.boolean().default(true),
+  }).default({ prompt: true, completion: true, reasoning: true }),
   metadata: z.object({
     sessionId: z.boolean().default(true),
     cwd: z.boolean().default(false),
@@ -584,6 +594,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     llm: {
       prompt: llmRaw.prompt ?? true,
       completion: llmRaw.completion ?? true,
+      reasoning: llmRaw.reasoning ?? true,
     },
     metadata: {
       sessionId: metadataRaw.sessionId ?? true,

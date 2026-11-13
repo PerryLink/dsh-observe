@@ -6,7 +6,8 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  isRetiredToolResultWrapper, projectContent, projectMessage, projectMessageContent, projectToolMessage,
+  isRetiredToolResultWrapper, projectContent, projectMessage, projectMessageContent,
+  projectReasoningContent, projectTextContent, projectToolMessage,
 } from '../src/project.ts'
 import { CallId } from './call-id.ts'
 import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
@@ -30,11 +31,48 @@ function retiredV3Wrapper(content: ContentBlock[]): ContentBlock {
 }
 
 describe('projectContent', () => {
+  // Full model-visible projection (used for the prompt export): text and
+  // reasoning both stay legible, in block order.
   it('passes text and reasoning blocks through verbatim', () => {
     expect(projectContent([
       { type: 'text', text: 'hello' },
       { type: 'reasoning', text: 'hmm' },
     ])).toBe('hello\nhmm')
+  })
+
+  // The completion split: the answer and the chain-of-thought are two bodies,
+  // never one string. This is the invariant the export relies on.
+  it('splits text from reasoning for the completion export', () => {
+    const blocks: ContentBlock[] = [
+      { type: 'reasoning', text: 'first thoughts' },
+      { type: 'text', text: 'hello' },
+      { type: 'reasoning', text: 'more thoughts' },
+      { type: 'text', text: 'world' },
+    ]
+    expect(projectTextContent(blocks)).toBe('hello\nworld')
+    expect(projectReasoningContent(blocks)).toBe('first thoughts\nmore thoughts')
+    expect(projectTextContent(blocks)).not.toContain('thoughts')
+    expect(projectReasoningContent(blocks)).not.toContain('hello')
+  })
+
+  it('keeps tool-call and image renderings out of the completion body', () => {
+    const blocks = [
+      { type: 'reasoning', text: 'hmm' },
+      { type: 'tool-call', id: 'c1', name: 'bash', arguments: '{"command":"ls"}' },
+      { type: 'image', source: { mediaType: 'image/png', data: 'x' } },
+      { type: 'text', text: 'done' },
+    ] as unknown as ContentBlock[]
+    expect(projectTextContent(blocks)).toBe('done')
+    expect(projectTextContent(blocks)).not.toContain('<tool-call')
+    expect(projectTextContent(blocks)).not.toContain('[image]')
+    expect(projectReasoningContent(blocks)).toBe('hmm')
+  })
+
+  it('returns an empty completion for a reasoning-only body', () => {
+    const blocks: ContentBlock[] = [{ type: 'reasoning', text: 'private reasoning' }]
+    expect(projectTextContent(blocks)).toBe('')
+    expect(projectReasoningContent(blocks)).toBe('private reasoning')
+    expect(projectTextContent(blocks)).not.toContain('private reasoning')
   })
 
   it('renders tool calls and images compactly', () => {

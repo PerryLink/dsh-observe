@@ -102,6 +102,64 @@ export function projectContent(blocks: readonly ContentBlock[]): string {
 }
 
 /**
+ * Narrow projection used by the completion export: keep only blocks of one
+ * text-bearing kind (`text` or `reasoning`). The retired V3 wrapper is still
+ * walked so a pre-upgrade log projects the same way it always did, but the
+ * two kinds are never merged.
+ * @param blocks - the model-facing content blocks.
+ * @param kind - the block kind to keep.
+ * @returns the joined text of that kind of block.
+ */
+function projectTextBlocks(blocks: readonly ContentBlock[], kind: 'text' | 'reasoning'): string {
+  const parts: string[] = []
+  for (const block of blocks as readonly unknown[]) {
+    if (isRetiredToolResultWrapper(block)) {
+      parts.push(projectTextBlocks(block.content, kind))
+      continue
+    }
+    if (block === null || typeof block !== 'object') continue
+    const typed = block as ContentBlock
+    switch (typed.type) {
+      case 'text':
+      case 'reasoning':
+        if (typed.type === kind) parts.push(typed.text)
+        break
+      default:
+        break
+    }
+  }
+  return parts.join('\n')
+}
+
+/**
+ * Project the assistant's visible answer: `text` blocks only.
+ *
+ * This is the body of `gen_ai.completion`. `reasoning` blocks are deliberately
+ * excluded — chain-of-thought is model-internal text that can quote the user's
+ * input verbatim, and merging it into the completion makes it
+ * indistinguishable from the final answer to a downstream backend (which would
+ * then price and display CoT as completion output). Tool-call and image blocks
+ * are not answer text either; tool calls are exported through their own tool
+ * spans, never folded back into the completion.
+ * @param blocks - the model-facing content blocks.
+ * @returns the joined `text` blocks (possibly empty).
+ */
+export function projectTextContent(blocks: readonly ContentBlock[]): string {
+  return projectTextBlocks(blocks, 'text')
+}
+
+/**
+ * Project the reasoning (chain-of-thought) blocks, kept separate from the
+ * completion. Exported only when both `llm.completion` and `llm.reasoning` are
+ * enabled, and never mixed into `gen_ai.completion`.
+ * @param blocks - the model-facing content blocks.
+ * @returns the joined `reasoning` blocks (possibly empty).
+ */
+export function projectReasoningContent(blocks: readonly ContentBlock[]): string {
+  return projectTextBlocks(blocks, 'reasoning')
+}
+
+/**
  * Project one message's content.
  *
  * A tool-role message carries its failure flag on the MESSAGE (`isError`), not

@@ -18,7 +18,7 @@ import type { EpochHeader, RequestContext, Session, SessionEvent } from '@deepse
 import type { ResolvedConfig } from './config.ts'
 import type { JsonScalar, MetricRecord, SpanRecord, TokenCounts } from './model.ts'
 import { findPrice, costUsd } from './pricing.ts'
-import { projectContent, projectMessage, projectToolMessage } from './project.ts'
+import { projectMessage, projectReasoningContent, projectTextContent, projectToolMessage } from './project.ts'
 import { sanitizeJsonText, sanitizeText } from './sanitize.ts'
 import type { ObserveLogger } from './sinks.ts'
 
@@ -82,6 +82,14 @@ function normalizeUsage(usage: TokenUsage | undefined): TokenCounts | undefined 
     output: usage.outputTokens,
     cacheRead: usage.cacheReadTokens ?? 0,
     cacheWrite: usage.cacheWriteTokens ?? 0,
+    // Host adapters do not fill `reasoningTokens` today: the DeepSeek Messages
+    // adapter maps only input/output/cache-read/cache-write from the wire usage
+    // (`packages/llm/llm-deepseek/src/translate.ts`, `updateUsage`), and no other
+    // adapter assigns it either. On those routes `gen_ai.usage.reasoning_tokens`
+    // and `observe.tokens{kind="reasoning"}` therefore stay 0 even though
+    // reasoning text is exported (as `gen_ai.completion.reasoning`). This is
+    // reported as the host gives it — no synthetic estimate is invented here;
+    // wire the field through once the adapter reports one.
     reasoning: usage.reasoningTokens ?? 0,
   }
 }
@@ -355,9 +363,22 @@ export class Collector {
         ? findPrice(this.config.pricing, provider, model)
         : undefined
       const cost = usage !== undefined && price !== undefined ? costUsd(price, usage) : undefined
+      // `gen_ai.completion` carries the visible answer only. Reasoning is a
+      // separate body: merged CoT is indistinguishable from the final answer to
+      // a downstream backend (which would price/display it as completion), so
+      // it travels as `gen_ai.completion.reasoning` under its own switch. Both
+      // bodies are gated by `llm.completion`; `llm.reasoning` can only narrow
+      // that, never widen it.
       const output = this.config.llm.completion
         ? sanitizeText(
-          projectContent(event.data.message.content),
+          projectTextContent(event.data.message.content),
+          this.config.sanitize.truncateCompletionChars,
+          this.config.sanitize,
+        )
+        : undefined
+      const reasoning = this.config.llm.completion && this.config.llm.reasoning
+        ? sanitizeText(
+          projectReasoningContent(event.data.message.content),
           this.config.sanitize.truncateCompletionChars,
           this.config.sanitize,
         )
@@ -381,6 +402,9 @@ export class Collector {
             : { ttftMs: Math.max(0, Math.round((step.firstChunkUnixNano - start) / NANO)) }),
           ...(step.prompt === undefined ? {} : { input: step.prompt }),
           ...(output === undefined ? {} : { output }),
+          // Empty reasoning adds no information and would only widen the
+          // payload, so it is omitted instead of exported as "".
+          ...(reasoning === undefined || reasoning === '' ? {} : { reasoning }),
           ...(cost === undefined ? {} : { costUsd: cost }),
         },
       })
