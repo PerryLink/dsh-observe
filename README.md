@@ -293,7 +293,7 @@ session/event 流
 
 | 维度 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.2.1-alpha.1`（2026-10-04 已适配）：会话格式 V4 把工具结果改为 `role: 'tool'` 的一等消息，顶层携带 `toolCallId` + `content` + 可选 `isError` —— V3 的 `tool-result` 内容块已从宿主 `ContentBlockMap` 移除，本插件只读 V4 形状（升级前的 V3 日志仍可经只读兼容路径投影）。会话格式 V3 的其余特征沿用：助手流内嵌到 `assistant/message` / `assistant/attempt`，系统提示词为 surface 节点 0（`system/message`）；本插件只消费实时事件流，从不读取会话日志文件。`engines.dsh` 为 `>=0.2.1-0 <0.3.0 \|\| >=0.2.2-0 <0.3.0`，profile 安装冒烟由 compat 工作流覆盖。 |
+| Harness | DeepSeek Harness `dsh-v0.2.2-rc.4`（2026-11-18 已适配）：会话格式 V4 把工具结果改为 `role: 'tool'` 的一等消息，顶层携带 `toolCallId` + `content` + 可选 `isError` —— V3 的 `tool-result` 内容块已从宿主 `ContentBlockMap` 移除，本插件只读 V4 形状（升级前的 V3 日志仍可经只读兼容路径投影）。会话格式 V3 的其余特征沿用：助手流内嵌到 `assistant/message` / `assistant/attempt`，系统提示词为 surface 节点 0（`system/message`）；本插件只消费实时事件流，从不读取会话日志文件。`engines.dsh` 为 `>=0.2.1-0 <0.3.0 \|\| >=0.2.2-0 <0.3.0`，profile 安装冒烟由 compat 工作流覆盖。 |
 | Node | `^22.19.0 \|\| >=24.9.0`，纯 ESM（`"type": "module"`） |
 | 后端 | OpenTelemetry OTLP/HTTP（traces + metrics，JSON 编码）与 Langfuse（LLM 可观测）——二选一或同时 |
 | 模型 | 与模型无关：它导出 session/event 流，自身不调用任何模型 |
