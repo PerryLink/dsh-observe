@@ -160,7 +160,7 @@ COPY = {
         footer="dsh plugin --profile web add dsh-observe",
     ),
 }
-META = "v0.2.27 · DSH 0.2.x · Node ^22.19 · Apache-2.0"
+META = "v0.2.29 · DSH 0.2.x · Node ^22.19 · Apache-2.0"
 
 ROWS = [
     # kind, name, bar start, bar end (px of 328), duration, inline tokens
@@ -501,7 +501,7 @@ def flow_svg(skin: str) -> str:
                 "bounded spool · deterministic ids")
     check_svg(subtitle, 13.5, "sans", 690, "flow subtitle")
     add(svg_text(44, 86, subtitle, 13.5, "sans", sub))
-    add(svg_text(1056, 56, "v0.2.27 · OTLP/HTTP + Langfuse", 12, "mono",
+    add(svg_text(1056, 56, "v0.2.29 · OTLP/HTTP + Langfuse", 12, "mono",
                  faint, anchor="end"))
     add(svg_text(1056, 84, "solid = sync · dashed = async / optional",
                  11.5, "sans", faint, anchor="end"))
