@@ -36,6 +36,10 @@ dsh plugin --profile <name> add dsh-observe
 
 ## 它是什么
 
+![dsh-observe 真实终端运行](docs/assets/dsh-observe-demo.gif)
+
+*本仓库一次真实运行的动图回放。*
+
 `dsh-observe` 把 harness 的 `session/event` 流翻译成标准可观测协议：一个 turn 一条 trace，step、工具调用与 LLM 生成各是一个 span，token 与成本是累计指标，prompt/completion 正文先脱敏截断再入队。它只做导出——不注册任何模型工具、不注册用户可见命令，全部行为由配置决定；配置了 OTLP 或 Langfuse 之后重启，数据自己流走，没配置就什么都不采集。
 
 <picture>

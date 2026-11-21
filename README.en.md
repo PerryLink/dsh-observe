@@ -121,6 +121,10 @@ This plugin registers **no model tools** and no user-facing command — it is a 
 
 ### Examples
 
+![dsh-observe: real terminal run](docs/assets/dsh-observe-demo.gif)
+
+*Animated replay of a real run recorded in this repository.*
+
 There is no manual trigger: after installation, turn `enabled` on with the minimal configuration above and restart; traces and metrics show up in the OTLP backend, observations show up in Langfuse. To confirm it is collecting, look at the first trace the backend receives; to confirm it is shipping, watch `observe/status` queue depths fall back as the session progresses.
 
 ## Configuration

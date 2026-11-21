@@ -43,6 +43,11 @@ O `dsh-observe` traduz o fluxo `session/event` do harness em protocolos de obser
   <img src="docs/assets/dsh-observe-flow-v5-light.svg" width="100%" alt="Estrutura do dsh-observe (uma bifurcação em duas canalizações em torno de um buffer limitado): session/event alimenta o collector (spans turn/step/tool/llm e métricas observe.tokens, observe.cost e observe.context_tokens, ids sha256 determinísticos), depois sanitize (redação por nome de chave, padrões de segredos embutidos e orçamentos de prompt/completion 4000 e ferramenta 2000/2000) sanea cada registro antes de qualquer fila; o registro bifurca em duas canalizações independentes, otlp e langfuse, cada uma com fila (256 registros ou 5000ms, maxQueueRecords 2000) → flush/retry (5 tentativas, 1000ms × 2 com teto de 60000ms) → seu endpoint; o esgotamento de tentativas e o transbordo da fila caem no buffer durável e limitado entre as pistas (10000 registros, expulsão do mais antigo, revalidação zod na leitura, sobrevive ao reinício), esvaziado de volta para ambos os endpoints a cada 30000ms pelo trilho tracejado da direita; embaixo à esquerda fica a superfície remota opcional observe/status e observe/setEnabled, e a faixa inferior fixa o contrato de desligado por padrão e os três eventos escutados">
 </picture>
 
+![dsh-observe: execução real de terminal](docs/assets/dsh-observe-demo.gif)
+
+*Repetição animada de uma execução real registrada neste repositório.*
+
+
 ## Instalação em três passos
 
 1. **Instalar** (escolha uma):

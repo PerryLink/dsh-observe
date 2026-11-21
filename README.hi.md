@@ -43,6 +43,11 @@ dsh plugin --profile <name> add dsh-observe
   <img src="docs/assets/dsh-observe-flow-v5-light.svg" width="100%" alt="dsh-observe संरचना (एक सीमित spool के इर्द-गिर्द दो पाइपलाइनों में फोर्क): session/event कलेक्टर को feed करता है (turn/step/tool/llm स्पैन तथा observe.tokens, observe.cost, observe.context_tokens मेट्रिक्स, नियतात्मक sha256 id), फिर sanitize (कुंजी-नाम redaction, अंतर्निहित सीक्रेट पैटर्न, prompt/completion 4000 और tool 2000/2000 अक्षर बजट) किसी भी कतार से पहले हर रिकॉर्ड साफ़ करता है; रिकॉर्ड दो स्वतंत्र पाइपलाइनों otlp और langfuse में बँटता है, हर एक कतार (256 रिकॉर्ड या 5000ms, maxQueueRecords 2000) → flush/retry (5 प्रयास, 1000ms × 2 बैकऑफ़, सीमा 60000ms) → अपने endpoint तक; पुनःप्रयास समाप्त होने और कतार भर जाने पर रिकॉर्ड दोनों पटरियों के बीच के सीमित storage-domain spool में जाते हैं (10000 रिकॉर्ड, सबसे पुराना पहले निकलता है, पढ़ते समय zod पुनः सत्यापन, पुनः आरंभ के बाद भी रहता है), और दाईं ओर की बिंदुदार रेल से हर 30000ms में दोनों endpoints को वापस भरे जाते हैं; नीचे बाईं ओर वैकल्पिक remote सतह observe/status और observe/setEnabled है, और नीचे की पट्टी डिफ़ॉल्ट-बंद अनुबंध तथा तीन सुने जाने वाले इवेंट बताती है">
 </picture>
 
+![dsh-observe का असली टर्मिनल रन](docs/assets/dsh-observe-demo.gif)
+
+*इस रिपॉज़िटरी में दर्ज असली रन का एनिमेटेड रीप्ले।*
+
+
 ## तीन चरणों में शुरुआत
 
 1. **इंस्टॉल** (एक चुनें):

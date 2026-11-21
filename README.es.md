@@ -43,6 +43,11 @@ dsh plugin --profile <name> add dsh-observe
   <img src="docs/assets/dsh-observe-flow-v5-light.svg" width="100%" alt="Estructura de dsh-observe (una bifurcación en dos canalizaciones alrededor de un búfer acotado): session/event alimenta el collector (spans turn/step/tool/llm y métricas observe.tokens, observe.cost y observe.context_tokens, ids sha256 deterministas), luego sanitize (redacción por nombre de clave, patrones de secretos integrados y presupuestos de prompt/completion 4000 y herramienta 2000/2000) sanea cada registro antes de cualquier cola; el registro se bifurca en dos canalizaciones independientes, otlp y langfuse, cada una con cola (256 registros o 5000ms, maxQueueRecords 2000) → flush/retry (5 intentos, 1000ms × 2 con tope de 60000ms) → su endpoint; el agotamiento de reintentos y el desbordamiento de cola caen en el búfer durable y acotado entre las pistas (10000 registros, expulsión del más antiguo, revalidación zod al leer, sobrevive al reinicio), vaciado de vuelta a ambos endpoints cada 30000ms por el riel discontinuo de la derecha; abajo a la izquierda está la superficie remota opcional observe/status y observe/setEnabled, y la banda inferior fija el contrato de apagado por defecto y los tres eventos escuchados">
 </picture>
 
+![dsh-observe: ejecución real de terminal](docs/assets/dsh-observe-demo.gif)
+
+*Repetición animada de una ejecución real registrada en este repositorio.*
+
+
 ## Instalación en tres pasos
 
 1. **Instalar** (elige una):
