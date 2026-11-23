@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Observe",
+    "description": "Turn every session into standard OTLP traces and Langfuse observations—sanitized before anything leaves, exporting nothing by default."
+  }
+}

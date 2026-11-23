@@ -7,6 +7,8 @@
 
 # dsh-observe
 
+当前版本 `0.2.31`。
+
 **把每次会话变成标准 OTLP trace 与 Langfuse 观测——发出去之前先脱敏，默认什么都不发。**
 
 面向 DeepSeek Harness 的可观测性导出器：turn/step/工具调用/LLM 生成 span，token 与 USD 成本指标，异步批量、有界离线缓冲、指数退避重试；OTLP 与 Langfuse 接其一或两个都接。

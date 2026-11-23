@@ -7,6 +7,8 @@
 
 # dsh-observe
 
+Current version `0.2.31`.
+
 **Turn every session into standard OTLP traces and Langfuse observations—sanitized before anything leaves, exporting nothing by default.**
 
 Observability exporter for DeepSeek Harness: turn/step/tool/LLM spans, token and USD cost metrics, async batching, a bounded offline buffer, and exponential-backoff retries; use OTLP, Langfuse, or both.

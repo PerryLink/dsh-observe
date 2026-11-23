@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "可观测性",
+    "description": "把每次会话变成标准 OTLP trace 与 Langfuse 观测——发出去之前先脱敏，默认什么都不发。"
+  }
+}
